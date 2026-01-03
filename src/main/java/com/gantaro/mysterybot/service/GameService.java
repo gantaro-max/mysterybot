@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.service;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,5 +75,25 @@ public class GameService {
         }
 
     }
+
+    @Transactional
+    public void createEvent(String eventId, String eventName) {
+        // すでに同じIDがないかチェック
+        if (teamGroupRepository.findByGroupId(eventId).isPresent()) {
+            throw new IllegalArgumentException("そのイベントIDは既に使用されています");
+        }
+
+        TeamGroup newGroup = new TeamGroup();
+        newGroup.setGroupId(eventId);
+        newGroup.setGroupName(eventName); // キーワードではなくイベント名として保存します
+
+        teamGroupRepository.insert(newGroup);
+    }
+
+    public List<TeamGroup> getAllEvents() {
+        return teamGroupRepository.findAll();
+    }
+
+
 
 }
