@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.repository;
 
+import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import com.gantaro.mysterybot.entity.TeamGroup;
@@ -8,5 +9,9 @@ import com.gantaro.mysterybot.entity.TeamGroup;
 public interface TeamGroupRepository {
 
     Optional<TeamGroup> findByGroupId(String groupId);
+
+    List<TeamGroup> findAll();
+
+    void insert(TeamGroup teamGroup);
 
 }

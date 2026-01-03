@@ -3,24 +3,27 @@
 ## 1. 概要 (Overview)
 LINE Botを活用した、周遊型・イベント型謎解きゲーム作成プラットフォーム。
 「グループID（テナント）」を分けることで、1つのシステムで複数の企業やイベント（結婚式余興、社内レクリエーションなど）を同時に稼働させることを可能とする。
+Webブラウザ上で動作する管理画面を提供し、SQLを操作せずにイベントの開設や謎の登録を可能にする。
 
 ## 2. 要件定義 (Requirements)
 
 ### 2.1 ターゲットユーザー
-1.  **管理者 (Game Master):** 謎解きイベントを主催したい人。問題を作成・管理する。
+1.  **管理者 (Game Master):** 謎解きイベントを主催したい人。Web管理画面から問題を作成・管理する。
 2.  **プレイヤー (Player):** LINEを使って謎解きに参加する一般ユーザー。
 
 ### 2.2 機能要件
-#### 【管理者機能】 (REST API / 管理画面)
+#### 【管理者機能】 (Webブラウザ管理画面)
+* **イベント（グループ）管理:**
+    * 新しいイベントID（例: `demo`）と、開始キーワードの発行。
+    * 既存イベントの一覧表示。
 * **謎の登録・編集・削除 (CRUD):**
-    * 問題文、正解キーワード、ヒント、順序（第何問目か）を設定できる。
-    * グループIDを指定して登録する。
+    * イベントごとの問題文、正解キーワード、ヒント、順序（第何問目か）をフォームから登録する。
 * **進捗確認:**
-    * どのプレイヤーが今どこまで進んでいるかを確認できる。
+    * どのプレイヤーが今どこまで進んでいるかを表形式で確認できる。
 
 #### 【プレイヤー機能】 (LINE Bot)
 * **ゲーム開始:**
-    * QRコード等を読み込み、特定の「グループID」に紐づくゲームを開始する。
+    * QRコード等を読み込み、特定の「イベントID」に紐づくゲームを開始する（例:「開始 demo」と送信）。
 * **回答送信:**
     * LINEのトーク画面で答えを入力する。
 * **正誤判定 (自動):**
@@ -29,8 +32,8 @@ LINE Botを活用した、周遊型・イベント型謎解きゲーム作成プ
     * 途中離脱しても、続きから再開できる。
 
 ### 2.3 非機能要件
-* **レスポンス速度:** LINEの返信は3秒以内に行う（Lambda/Cloud Function等のコールドスタート対策含む）。
-* **同時接続:** 1イベントあたり最大100名程度の同時アクセスに耐える設計。
+* **レスポンス速度:** LINEの返信は3秒以内に行う。
+* **UI/UX (管理画面):** PC/タブレットブラウザで操作可能なレスポンシブデザイン (Bootstrap採用)。
 
 ---
 
@@ -38,17 +41,24 @@ LINE Botを活用した、周遊型・イベント型謎解きゲーム作成プ
 
 ### 3.1 アーキテクチャ
 * **Backend:** Java 21, Spring Boot 4.01
+* **Frontend (Admin):** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
 * **Database:** MySQL 8.0 (Docker)
 * **ORM:** MyBatis
 * **Interface:** LINE Messaging API (Webhook)
 
-### 3.2 処理フロー (シーケンス概要)
+### 3.2 処理フロー
+**【LINE Botフロー】**
 1.  **User** -> (メッセージ送信) -> **LINE Platform**
-2.  **LINE Platform** -> (Webhook POST) -> **Spring Boot (Controller)**
+2.  **LINE Platform** -> (Webhook POST) -> **Spring Boot (LineWebhookController)**
 3.  **Controller** -> **Service** (メッセージ解析・正誤判定ロジック)
 4.  **Service** -> **Mapper** (DB問い合わせ: 正解取得・進捗更新)
 5.  **Service** -> **LINE SDK** (返信メッセージ生成)
 6.  **Spring Boot** -> (API Call) -> **LINE Platform** -> **User**
+
+**【管理画面フロー】**
+1.  **Admin User** -> (ブラウザ・GET) -> **Spring Boot (AdminController)**
+2.  **AdminController** -> **Service** (DBデータ取得)
+3.  **AdminController** -> **Thymeleaf Template** (HTML生成) -> **Admin User**
 
 ---
 
@@ -107,24 +117,22 @@ LINEユーザーと、現在参加しているグループの紐付け。
 
 ---
 
-## 5. 詳細設計 (API Endpoints)
+## 5. 詳細設計 (Endpoints)
 
-開発フェーズ1で作るべき主要API。
+### 5.1 管理画面用エンドポイント (Web UI)
 
-### 5.1 管理者用 API (REST)
-
-| Method | Path | Description |
-| :--- | :--- | :--- |
-| **POST** | `/api/admin/riddles` | 新しい謎を登録する |
-| **GET** | `/api/admin/riddles/{groupId}` | そのグループの謎一覧を取得 |
-| **PUT** | `/api/admin/riddles/{id}` | 謎の内容を修正する |
-| **DELETE** | `/api/admin/riddles/{id}` | 謎を削除する |
+| Method | Path | Description | Template File |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/admin` | 管理画面トップ（イベント一覧）を表示 | `admin/index.html` |
+| **GET** | `/admin/create` | 新規イベント作成フォームを表示 | `admin/create.html` |
+| **POST** | `/admin/create` | フォーム入力値を受け取り、イベントをDB保存 | (Redirect to /admin) |
+| **GET** | `/admin/riddles/{groupId}` | 特定イベントの謎一覧・登録画面 (予定) | `admin/riddles.html` |
 
 ### 5.2 LINE Webhook
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| **POST** | `/api/callback` | LINEからのイベント受信 (全ロジックの入り口) |
+| **POST** | `/callback` | LINEからのイベント受信 (Botの入り口) |
 
 ---
 
@@ -134,18 +142,25 @@ LINEユーザーと、現在参加しているグループの紐付け。
 ```text
 com.gantaro.mysterybot
 ├── controller
-│   ├── AdminController.java (管理者API: 謎やグループの登録)
-│   └── LineWebhookController.java (LINE受付: ゲーム進行)
+│   ├── AdminController.java      <-- (HTMLを返すコントローラー: 画面遷移担当)
+│   └── LineWebhookController.java <-- (LINE Messaging API担当)
 ├── service
-│   ├── GameService.java (正誤判定、ステージ進行ロジック)
-│   └── PlayerService.java (ユーザー登録、状態管理)
-├── repository (MyBatis)
+│   ├── GameService.java          <-- (Botのゲーム進行ロジック)
+│   ├── AdminService.java         <-- (管理画面用のデータ操作ロジック)
+│   └── PlayerService.java
+├── repository (MyBatis Mapper)
 │   ├── GroupRepository.java
 │   ├── RiddleRepository.java
 │   ├── PlayerRepository.java
 │   └── ProgressRepository.java
-└── entity (Data Model)
-    ├── Group.java
-    ├── Riddle.java
-    ├── Player.java
-    └── Progress.java
+├── entity (Data Model)
+│   ├── Group.java
+│   ├── Riddle.java
+│   ├── Player.java
+│   └── Progress.java
+└── resources
+    └── templates                 <-- (Thymeleaf HTMLファイル置き場)
+        └── admin
+            ├── index.html        (イベント一覧画面)
+            ├── create.html       (イベント作成画面)
+            └── riddles.html      (謎管理画面: 今後作成)
