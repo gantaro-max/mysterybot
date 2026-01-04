@@ -9,7 +9,9 @@
     </select>
 
     <select id="findByLineUserId" resultType="com.gantaro.mysterybot.entity.Player">
-        SELECT * FROM players WHERE line_user_id = #{lineUserId}
+        SELECT * FROM players 
+        WHERE line_user_id = #{lineUserId}
+        ORDER BY last_active DESC  LIMIT 1
     </select>
 
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Player" useGeneratedKeys="true" keyProperty="id">

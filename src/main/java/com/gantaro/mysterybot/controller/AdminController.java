@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminController {
 
-    // ★GameServiceではなくEventAdminServiceを使います
     private final EventAdminService eventAdminService;
     private final HttpSession session;
 

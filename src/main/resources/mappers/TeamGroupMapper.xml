@@ -12,7 +12,15 @@
     </select>
 
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.TeamGroup">
-        INSERT INTO team_groups (group_id,group_name,created_at) VALUES(#{groupId},#{groupName},NOW())
+        INSERT INTO team_groups (
+            group_id,
+            group_name,
+            admin_pass,       is_random_order,  created_at
+        ) VALUES (
+            #{groupId},
+            #{groupName},
+            #{adminPass},     #{isRandomOrder}, NOW()
+        )
     </insert>
 
     <update id="updateRandomMode">
