@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gantaro.mysterybot.dto.GameResult;
 import com.gantaro.mysterybot.entity.Player;
 import com.gantaro.mysterybot.entity.Riddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
@@ -20,10 +21,10 @@ public class GameService {
     private final TeamGroupRepository teamGroupRepository;
 
     @Transactional
-    public String joinGame(String lineUserId, String groupId) {
+    public GameResult joinGame(String lineUserId, String groupId) {
         Optional<TeamGroup> findGroup = teamGroupRepository.findByGroupId(groupId);
         if (findGroup.isEmpty()) {
-            return "グループが見つかりません";
+            return new GameResult(GameResult.Status.FAILURE, "グループが見つかりません", null);
         }
 
         Optional<Player> searchPlayer =
@@ -42,22 +43,23 @@ public class GameService {
 
         Optional<Riddle> resultRiddle = riddleRepository.findByGroupIdAndStageNo(groupId, stageNo);
         if (resultRiddle.isEmpty()) {
-            return "すべてクリアしています";
+            return new GameResult(GameResult.Status.TEXT_ONLY, "すべてクリアしています", null);
         }
 
-        return resultRiddle.get().getQuestion();
+        return new GameResult(GameResult.Status.SUCCESS, resultRiddle.get().getQuestion(), null);
     }
 
     @Transactional
-    public String processAnswer(String lineUserId, String userText) {
+    public GameResult processAnswer(String lineUserId, String userText) {
         Optional<Player> resultPlayer = playerRepository.findByLineUserId(lineUserId);
         if (resultPlayer.isEmpty()) {
-            return "まずは「開始[イベントID]」と送って参加してください";
+            return new GameResult(GameResult.Status.TEXT_ONLY, "まずは「開始 [イベントID]」と送って参加してください",
+                    null);
         }
         Optional<Riddle> resultRiddle = riddleRepository.findByGroupIdAndStageNo(
                 resultPlayer.get().getGroupId(), resultPlayer.get().getCurrentStage());
         if (resultRiddle.isEmpty()) {
-            return "すべてクリアしています";
+            return new GameResult(GameResult.Status.TEXT_ONLY, "すべてクリアしています", null);
         }
         if (userText.trim().equalsIgnoreCase(resultRiddle.get().getAnswer())) {
             playerRepository.updateProgress(resultPlayer.get().getId(),
@@ -65,13 +67,14 @@ public class GameService {
             Optional<Riddle> nextRiddle = riddleRepository.findByGroupIdAndStageNo(
                     resultPlayer.get().getGroupId(), resultPlayer.get().getCurrentStage() + 1);
             if (nextRiddle.isEmpty()) {
-                return resultRiddle.get().getNextMsg() + "\n\n🎉全問クリアおめでとう！";
+                return new GameResult(GameResult.Status.SUCCESS, resultRiddle.get().getNextMsg(),
+                        "全問クリアおめでとう！");
             } else {
-                return resultRiddle.get().getNextMsg() + "\n\n" + "▼ 次の問題\n"
-                        + nextRiddle.get().getQuestion();
+                return new GameResult(GameResult.Status.SUCCESS, resultRiddle.get().getNextMsg(),
+                        nextRiddle.get().getQuestion());
             }
         } else {
-            return "残念、不正解です...もう一度チャレンジ！";
+            return new GameResult(GameResult.Status.FAILURE, "残念、不正解です...もう一度チャレンジ！", null);
         }
 
     }
