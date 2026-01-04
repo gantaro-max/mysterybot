@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>ダッシュボード</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <h2>ようこそ、<span th:text="${group.groupName}" class="text-primary"></span> 様</h2>
+        <a href="/admin/logout" class="btn btn-outline-danger btn-sm">ログアウト</a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>📣 参加方法:</strong><br>
+        LINE Botに「<strong>開始 <span th:text="${group.groupId}"></span></strong>」と送信してください。
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center p-5">
+                    <div class="display-1 mb-3">📝</div>
+                    <h3 class="card-title">シナリオ編集</h3>
+                    <p class="card-text text-muted">問題の追加・編集・削除や<br>出題モードの設定を行います。</p>
+                    <a href="/admin/riddles" class="btn btn-primary btn-lg mt-3 w-100">編集画面へ</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center p-5">
+                    <div class="display-1 mb-3">🏆</div>
+                    <h3 class="card-title">ランキング</h3>
+                    <p class="card-text text-muted">リアルタイムの順位表を表示します。<br>会場のスクリーン表示に最適です。</p>
+                    <a href="/admin/ranking" class="btn btn-success btn-lg mt-3 w-100">ランキングを見る</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
