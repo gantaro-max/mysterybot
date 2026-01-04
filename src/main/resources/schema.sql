@@ -1,22 +1,24 @@
 -- 開発用：既存のテーブルがあれば削除してリセットする
-DROP TABLE IF EXISTS progress;
+-- (外部キー制約があるため、子テーブルから順に削除します)
+DROP TABLE IF EXISTS solved_histories;
 DROP TABLE IF EXISTS players;
 DROP TABLE IF EXISTS riddles;
 DROP TABLE IF EXISTS team_groups;
 
 -- 1. イベント・グループ管理テーブル
 CREATE TABLE team_groups (
-    group_id VARCHAR(50) PRIMARY KEY, -- 例: 'wedding_2024'
+    group_id VARCHAR(50) PRIMARY KEY, -- 例: 'demo'
     group_name VARCHAR(100) NOT NULL,
     admin_pass VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_random_order BOOLEAN DEFAULT FALSE -- ランダム出題モード設定
 );
 
 -- 2. 謎・問題マスタテーブル
 CREATE TABLE riddles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     group_id VARCHAR(50) NOT NULL,
-    stage_no INT NOT NULL,            -- 第何問目か
+    stage_no INT NOT NULL,            -- 順番モード時の出題順
     question TEXT NOT NULL,
     answer VARCHAR(255) NOT NULL,
     next_msg TEXT,                    -- 正解時のメッセージ
@@ -28,26 +30,35 @@ CREATE TABLE players (
     id INT AUTO_INCREMENT PRIMARY KEY,
     line_user_id VARCHAR(255) NOT NULL,
     group_id VARCHAR(50) NOT NULL,
-    current_stage INT DEFAULT 1,      -- 現在挑戦中のステージ
+    
+    current_stage INT DEFAULT 0,      -- 初期値0（名前入力待ち）
+    player_name VARCHAR(255),         -- チーム名/個人名
+    start_at DATETIME,                -- 開始時刻
+    finished_at DATETIME,             -- クリア時刻
+    current_riddle_id INT,            -- 現在挑戦中の問題ID（ランダムモード用）
+    
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES team_groups(group_id),
     UNIQUE (line_user_id, group_id)   -- 1人のユーザーは1つのグループ内で一意
 );
 
--- 4. 回答履歴・ログテーブル
-CREATE TABLE progress (
+-- 4. 回答履歴テーブル
+-- 誰がどの問題をクリア済みかを記録する
+CREATE TABLE solved_histories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     player_id INT NOT NULL,
     riddle_id INT NOT NULL,
-    is_cleared BOOLEAN DEFAULT FALSE,
-    cleared_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (player_id) REFERENCES players(id),
+    solved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, -- プレイヤーが消えたら履歴も消す
     FOREIGN KEY (riddle_id) REFERENCES riddles(id)
 );
 
+-- ==========================================
 -- 初期データの投入（テスト用）
--- まずグループを作る
-INSERT INTO team_groups (group_id, group_name) VALUES ('demo', 'デモ用謎解きイベント');
+-- ==========================================
+
+-- デモ用グループを作る (ランダムOFFで作成)
+INSERT INTO team_groups (group_id, group_name, is_random_order) VALUES ('demo', 'デモ用謎解きイベント', FALSE);
 
 -- デモグループ用の謎を3問登録する
 INSERT INTO riddles (group_id, stage_no, question, answer, next_msg) 

@@ -1,5 +1,7 @@
 package com.gantaro.mysterybot.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -20,6 +22,19 @@ public interface PlayerRepository {
     Optional<Player> findByLineUserId(String lineUserId);
 
     void savePlayer(Player player);
+
+    void updateNameAndStart(@Param("id") Integer id, @Param("playerName") String playerName,
+            @Param("startAt") LocalDateTime startAt);
+
+    void updateCurrentRiddleId(@Param("id") Integer id,
+            @Param("nextRiddleId") Integer nextRiddleId);
+
+    void updateFinishedAt(@Param("id") Integer id, @Param("finishedAt") LocalDateTime finishedAt);
+
+    List<Player> findRankingByGroup(@Param("groupId") String groupId);
+
+    // プレイヤー削除
+    void deleteById(Integer id);
 
 
 

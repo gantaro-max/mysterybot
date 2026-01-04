@@ -8,8 +8,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.gantaro.mysterybot.entity.Player;
 import com.gantaro.mysterybot.entity.Riddle;
-import com.gantaro.mysterybot.service.GameService;
+import com.gantaro.mysterybot.entity.TeamGroup;
+import com.gantaro.mysterybot.service.EventAdminService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Controller
@@ -17,83 +20,111 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final GameService gameService;
+    // ★GameServiceではなくEventAdminServiceを使います
+    private final EventAdminService eventAdminService;
+    private final HttpSession session;
 
-    // 1. 管理画面トップ（一覧表示）
-    @GetMapping
-    public String index(Model model) {
-        // DBから全イベントを取得して画面に渡す
-        model.addAttribute("events", gameService.getAllEvents());
-        return "admin/index";
+    // セッションチェック用のヘルパーメソッド
+    private String getLoginGroupId() {
+        return (String) session.getAttribute("loginGroupId");
     }
 
-    // 2. 作成フォーム表示
-    @GetMapping("/create")
-    public String createForm() {
-        return "admin/create";
+    // 1. ダッシュボード表示 (旧indexから変更)
+    @GetMapping("/dashboard")
+    public String dashboard(Model model) {
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
+
+        TeamGroup group = eventAdminService.getEvent(groupId);
+        model.addAttribute("group", group);
+        return "admin/dashboard";
     }
 
-    // 3. 登録処理
-    @PostMapping("/create")
-    public String create(@RequestParam String eventId, @RequestParam String eventName) {
-        try {
-            gameService.createEvent(eventId, eventName);
-        } catch (Exception e) {
-            // エラーがあったらログに出す（本来は画面にエラーメッセージを出すべきですが簡易的に）
-            System.out.println("登録エラー: " + e.getMessage());
-            return "redirect:/admin/create?error";
-        }
-        return "redirect:/admin";
+    // 2. ランキング画面 (新規)
+    @GetMapping("/ranking")
+    public String ranking(Model model) {
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
+
+        TeamGroup group = eventAdminService.getEvent(groupId);
+        List<Player> ranking = eventAdminService.getRanking(groupId);
+
+        model.addAttribute("group", group);
+        model.addAttribute("ranking", ranking);
+        return "admin/ranking";
     }
 
-    // 4. 謎（問題）の一覧＆登録画面を表示
-    @GetMapping("/riddles/{groupId}")
-    public String rddleList(@PathVariable String groupId, Model model) {
+    // 3. 謎（問題）の一覧表示 (シナリオ編集)
+    @GetMapping("/riddles")
+    public String listRiddles(Model model) {
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
 
-        List<Riddle> rddles = gameService.getRiddles(groupId);
+        TeamGroup group = eventAdminService.getEvent(groupId);
+        List<Riddle> riddles = eventAdminService.getRiddles(groupId);
 
+        model.addAttribute("group", group);
+        model.addAttribute("riddles", riddles);
         model.addAttribute("groupId", groupId);
-        model.addAttribute("riddles", rddles);
 
         return "admin/riddles";
     }
 
-    // 5. 謎（問題）の登録処理
+    // 4. 謎（問題）の登録処理
     @PostMapping("/riddles/add")
-    public String addRiddle(@RequestParam String groupId, @RequestParam String question,
-            @RequestParam String answer, @RequestParam String nextMsg) {
+    public String addRiddle(@RequestParam String question, @RequestParam String answer,
+            @RequestParam String nextMsg) {
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
 
-        gameService.registerRiddle(groupId, question, answer, nextMsg);
-
-        return "redirect:/admin/riddles/" + groupId;
-
+        eventAdminService.registerRiddle(groupId, question, answer, nextMsg);
+        return "redirect:/admin/riddles";
     }
 
-    // 6. 編集画面を表示
+    // 5. 編集画面を表示
     @GetMapping("/riddles/edit/{id}")
     public String editRiddle(@PathVariable Integer id, Model model) {
-        Riddle riddle = gameService.getRiddle(id);
+        if (getLoginGroupId() == null)
+            return "redirect:/admin/login";
+
+        Riddle riddle = eventAdminService.getRiddle(id);
         model.addAttribute("riddle", riddle);
         return "admin/riddle_edit";
     }
 
-    // 7. 更新処理を実行
+    // 6. 更新処理
     @PostMapping("/riddles/update")
     public String updateRiddle(@RequestParam Integer id, @RequestParam String question,
             @RequestParam String answer, @RequestParam String nextMsg) {
-        Riddle original = gameService.getRiddle(id);
+        if (getLoginGroupId() == null)
+            return "redirect:/admin/login";
 
-        gameService.updateRiddle(id, question, answer, nextMsg);
-
-        return "redirect:/admin/riddles/" + original.getGroupId();
+        eventAdminService.updateRiddle(id, question, answer, nextMsg);
+        return "redirect:/admin/riddles";
     }
 
-    // 8. 削除処理を実行
+    // 7. 削除処理
     @PostMapping("/riddles/delete/{id}")
     public String deleteRiddle(@PathVariable Integer id) {
-        Riddle original = gameService.getRiddle(id);
-        gameService.deleteRiddle(id);
+        if (getLoginGroupId() == null)
+            return "redirect:/admin/login";
 
-        return "redirect:/admin/riddles/" + original.getGroupId();
+        eventAdminService.deleteRiddle(id);
+        return "redirect:/admin/riddles";
+    }
+
+    // 8. 設定を保存するPOST処理
+    @PostMapping("/riddles/settings")
+    public String updateSettings(@RequestParam(required = false) Boolean isRandom) {
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
+
+        eventAdminService.updateEventSettings(groupId, isRandom != null);
+        return "redirect:/admin/riddles";
     }
 }
