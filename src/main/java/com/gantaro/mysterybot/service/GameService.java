@@ -90,8 +90,54 @@ public class GameService {
         teamGroupRepository.insert(newGroup);
     }
 
+    // イベント一覧を取得
     public List<TeamGroup> getAllEvents() {
         return teamGroupRepository.findAll();
+    }
+
+    // イベントの謎一覧を取得
+    public List<Riddle> getRiddles(String groupId) {
+        return riddleRepository.findAllByGroup(groupId);
+    }
+
+    // 謎の登録
+    @Transactional
+    public void registerRiddle(String groupId, String question, String answer, String nextMsg) {
+
+        Integer nextStage = riddleRepository.countByGroup(groupId) + 1;
+
+        Riddle newRiddle = new Riddle();
+        newRiddle.setGroupId(groupId);
+        newRiddle.setStageNo(nextStage);
+        newRiddle.setQuestion(question);
+        newRiddle.setAnswer(answer);
+        newRiddle.setNextMsg(nextMsg);
+
+        riddleRepository.insert(newRiddle);
+    }
+
+    // 1件の問題を取得
+    public Riddle getRiddle(Integer id) {
+        return riddleRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("謎が見つかりません:ID" + id));
+
+    }
+
+    // 謎の更新
+    @Transactional
+    public void updateRiddle(Integer id, String question, String answer, String nextMsg) {
+        Riddle resultRiddle = getRiddle(id);
+
+        resultRiddle.setQuestion(question);
+        resultRiddle.setAnswer(answer);
+        resultRiddle.setNextMsg(nextMsg);
+        riddleRepository.update(resultRiddle);
+    }
+
+    // 謎の削除
+    @Transactional
+    public void deleteRiddle(Integer id) {
+        riddleRepository.delete(id);
     }
 
 
