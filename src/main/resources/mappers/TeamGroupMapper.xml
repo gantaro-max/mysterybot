@@ -3,17 +3,23 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.gantaro.mysterybot.repository.TeamGroupRepository">
 
-  <select id="findByGroupId" resultType="com.gantaro.mysterybot.entity.TeamGroup">
-    SELECT * FROM team_groups WHERE group_id = #{groupId}
-  </select>
+    <select id="findByGroupId" resultType="com.gantaro.mysterybot.entity.TeamGroup">
+        SELECT * FROM team_groups WHERE group_id = #{groupId}
+    </select>
 
-  <select id="findAll" resultType="com.gantaro.mysterybot.entity.TeamGroup">
-    SELECT * FROM team_groups ORDER BY created_at DESC
-  </select>
+    <select id="findAll" resultType="com.gantaro.mysterybot.entity.TeamGroup">
+        SELECT * FROM team_groups ORDER BY created_at DESC
+    </select>
 
-  <insert id="insert" parameterType="com.gantaro.mysterybot.entity.TeamGroup">
-    INSERT INTO team_groups (group_id,group_name,created_at) VALUES(#{groupId},#{groupName},NOW())
-  </insert>
+    <insert id="insert" parameterType="com.gantaro.mysterybot.entity.TeamGroup">
+        INSERT INTO team_groups (group_id,group_name,created_at) VALUES(#{groupId},#{groupName},NOW())
+    </insert>
+
+    <update id="updateRandomMode">
+        UPDATE team_groups
+        SET is_random_order = #{isRandom}
+        WHERE group_id = #{groupId}
+    </update>
 
 
 </mapper>

@@ -9,6 +9,30 @@
     <h1>シナリオ編集: <span th:text="${groupId}"></span></h1>
     <a href="/admin" class="btn btn-secondary mb-4">← イベント一覧に戻る</a>
 
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">⚙️ イベント設定</div>
+        <div class="card-body">
+            <form action="/admin/riddles/settings" method="post" class="d-flex align-items-center">
+                <input type="hidden" name="groupId" th:value="${groupId}">
+                
+                <div class="form-check form-switch me-4">
+                    <input class="form-check-input" type="checkbox" id="randomSwitch" 
+                           name="isRandom" value="true"
+                           th:checked="${group.isRandomOrder}" style="cursor: pointer;">
+                    <label class="form-check-label fw-bold" for="randomSwitch" style="cursor: pointer;">
+                        ランダム出題モード
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-sm">設定を保存</button>
+            </form>
+            
+            <div class="alert alert-light mt-3 mb-0 border p-2 small">
+                <strong>ONの場合:</strong> 未回答の問題からランダムに出題されます。（チーム対抗戦などに推奨）<br>
+                <strong>OFFの場合:</strong> 「No (StageNo)」の順番通りに出題されます。（ストーリー重視の場合に推奨）
+            </div>
+        </div>
+    </div>
     <div class="card mb-4">
         <div class="card-header bg-light">新しい問題を追加</div>
         <div class="card-body">
@@ -57,6 +81,25 @@
                         <button type="submit" class="btn btn-sm btn-danger">削除</button>
                     </form>
                 </td>
+            </tr>
+        </tbody>
+    </table>
+    <hr class="my-5">
+
+    <h2>🏆 タイムアタックランキング</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>順位</th>
+                <th>チーム名/名前</th>
+                <th>クリアタイム</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="player, stat : ${ranking}">
+                <td th:text="${stat.count} + '位'">1位</td>
+                <td th:text="${player.playerName}">名前</td>
+                <td th:text="${player.getClearTime()}">05:30</td>
             </tr>
         </tbody>
     </table>

@@ -9,5 +9,6 @@ public class TeamGroup {
     private String groupName;
     private String adminPass;
     private LocalDateTime createdAt;
+    private Boolean isRandomOrder;
 
 }

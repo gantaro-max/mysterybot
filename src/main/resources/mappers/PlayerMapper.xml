@@ -4,25 +4,66 @@
 
 <mapper namespace="com.gantaro.mysterybot.repository.PlayerRepository">
 
-  <select id="findByLineUserAndGroup" resultType="com.gantaro.mysterybot.entity.Player">
-    SELECT * FROM players WHERE line_user_id = #{lineUserId} AND group_id = #{groupId}
-  </select>
+    <select id="findByLineUserAndGroup" resultType="com.gantaro.mysterybot.entity.Player">
+        SELECT * FROM players WHERE line_user_id = #{lineUserId} AND group_id = #{groupId}
+    </select>
 
-  <select id="findByLineUserId" resultType="com.gantaro.mysterybot.entity.Player">
-    SELECT * FROM players WHERE line_user_id = #{lineUserId}
-  </select>
+    <select id="findByLineUserId" resultType="com.gantaro.mysterybot.entity.Player">
+        SELECT * FROM players WHERE line_user_id = #{lineUserId}
+    </select>
 
-  <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Player" useGeneratedKeys = "true" keyProperty = "id">
-    INSERT INTO players (line_user_id, group_id, current_stage, last_active) VALUES (#{lineUserId}, #{groupId}, 1, NOW())
-  </insert>
+    <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Player" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO players (
+            line_user_id,
+            group_id,
+            current_stage,
+            player_name,
+            start_at,
+            finished_at,
+            current_riddle_id,
+            last_active
+        ) VALUES (
+            #{lineUserId},
+            #{groupId},
+            #{currentStage}, #{playerName},
+            #{startAt},
+            #{finishedAt},
+            #{currentRiddleId},
+            NOW()
+        )
+    </insert>
 
-  <update id="updateProgress">
-    UPDATE players SET current_stage = #{currentStage}, last_active = NOW() WHERE id = #{id}
-  </update>
+    <update id="updateProgress">
+        UPDATE players SET current_stage = #{currentStage}, last_active = NOW() WHERE id = #{id}
+    </update>
 
-  <update id="savePlayer" parameterType="com.gantaro.mysterybot.entity.Player">
-    UPDATE players SET line_user_id = #{lineUserId},group_id = #{groupId},
-    current_stage = #{currentStage},last_active = #{lastActive} WHERE id = #{id}
-  </update>
+    <update id="savePlayer" parameterType="com.gantaro.mysterybot.entity.Player">
+        UPDATE players SET line_user_id = #{lineUserId},group_id = #{groupId},
+        current_stage = #{currentStage},last_active = #{lastActive} WHERE id = #{id}
+    </update>
+
+    <update id="updateNameAndStart">
+        UPDATE players
+        SET player_name = #{playerName}, start_at = #{startAt}, current_stage = 1
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateCurrentRiddleId">
+        UPDATE players SET current_riddle_id = #{nextRiddleId} WHERE id = #{id}
+    </update>
+
+    <update id="updateFinishedAt">
+        UPDATE players SET finished_at = #{finishedAt} WHERE id = #{id}
+    </update>
+  
+    <select id="findRankingByGroup" resultType="com.gantaro.mysterybot.entity.Player">
+        SELECT * FROM players 
+        WHERE group_id = #{groupId} AND finished_at IS NOT NULL
+        ORDER BY TIMESTAMPDIFF(SECOND, start_at, finished_at) ASC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM players WHERE id = #{id}
+    </delete>
 
 </mapper>
