@@ -15,7 +15,19 @@ public interface RiddleRepository {
     // そのグループに全部で何問あるか数える（クリア判定用）
     int countByGroup(String groupId);
 
-    // 全件取得（管理者用など）
+    // 全件取得（管理者画面用）
     List<Riddle> findAllByGroup(String groupId);
+
+    // IDで1件取得（管理画面用）
+    Optional<Riddle> findById(Integer id);
+
+    // 謎（問題）を保存
+    void insert(Riddle riddle);
+
+    // 謎（問題）の更新
+    void update(Riddle riddle);
+
+    // 謎（問題）の削除
+    void delete(Integer id);
 
 }
