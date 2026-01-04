@@ -16,4 +16,20 @@
     SELECT * FROM riddles WHERE group_id = #{groupId}
   </select>
 
+  <select id="findById" resultType="com.gantaro.mysterybot.entity.Riddle">
+    SELECT * FROM riddles WHERE id = #{id}
+  </select>
+
+  <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Riddle">
+    INSERT INTO riddles (group_id,stage_no,question,answer,next_msg) VALUES (#{groupId},#{stageNo},#{question},#{answer},#{nextMsg})
+  </insert>
+
+  <update id="update" parameterType="com.gantaro.mysterybot.entity.Riddle">
+    UPDATE riddles SET question = #{question}, answer = #{answer}, next_msg = #{nextMsg} WHERE id = #{id}
+  </update>
+
+  <delete id="delete">
+    DELETE FROM riddles WHERE id = #{id}
+  </delete>
+
 </mapper>
