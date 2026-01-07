@@ -86,7 +86,8 @@ public class GameService {
     @Transactional
     public GameResult processAnswer(String lineUserId, String userText) {
         Player player = playerRepository.findByLineUserId(lineUserId)
-                .orElseThrow(() -> new IllegalArgumentException("参加していません"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "まだ参加していません 開始 [イベントID]」を入力し送信するか、開始用のQRコードを読み込んでください"));
 
         if (player.getCurrentStage() == 0) {
             String name = userText.trim();

@@ -29,25 +29,41 @@ public class LineWebhookController {
 
         TextMessageContent textContent = (TextMessageContent) event.message();
         String userId = event.source().userId();
-        String text = textContent.text().trim();
+        String text = textContent.text().trim(); // 空白除去
 
         log.info("受信メッセージ: userId={}, text={}", userId, text);
 
         try {
-            // 0. リセットコマンド
+            // ▼▼▼ 1. リセット機能 ▼▼▼
+            // リッチメニューの「リセット」ボタンや、手入力に対応
             if (text.equals("リセット") || text.equalsIgnoreCase("reset")) {
                 String reply = gameService.resetGame(userId);
                 return new TextMessage(reply);
             }
 
-            // 1. 開始コマンドの処理
+            // ▼▼▼ 2. 遊び方ヘルプ機能 (★新規追加) ▼▼▼
+            // リッチメニューの「遊び方」ボタンに対応
+            if (text.equals("遊び方") || text.equals("ヘルプ")) {
+                String helpMsg = """
+                        【遊び方】
+                        1. 出題された問題の答えを入力し送信してください。
+                        2. 正解すると次のストーリーに進みます。
+                        3. どうしても分からないときは仲間と協力しましょう！
+
+                        ※最初からやり直す場合は、メニューを表示し「リセット」を押すか、「リセット」と入力して送信してください。
+                        """;
+                return new TextMessage(helpMsg);
+            }
+
+            // ▼▼▼ 3. 開始コマンド処理 ▼▼▼
+            // QRコードまたは手入力（例: "開始 demo"）に対応
             if (text.startsWith("開始") || text.toLowerCase().startsWith("start")) {
-                String[] parts = text.split("\\s+", 2);
+                String[] parts = text.split("\\s+", 2); // 空白で分割
                 if (parts.length == 2) {
                     GameResult result = gameService.joinGame(userId, parts[1]);
 
                     if (result.getStatus() == GameResult.Status.SUCCESS) {
-                        // 開始成功（再開時など）は「出題カード」
+                        // ヘルパーを呼ぶ
                         return FlexMessageHelper.createQuestionMessage(result.getMainText());
                     } else {
                         return new TextMessage(result.getMainText());
@@ -56,29 +72,29 @@ public class LineWebhookController {
                     return new TextMessage("イベントIDを入力してください。\n例: 「開始 demo」");
                 }
             }
-            // 2. 回答（および名前入力）の処理
-            else {
-                GameResult result = gameService.processAnswer(userId, text);
 
-                if (result.getStatus() == GameResult.Status.SUCCESS) {
+            // ▼▼▼ 4. 通常のゲーム回答処理 (それ以外) ▼▼▼
+            // 上記のどのコマンドにも当てはまらない場合は、回答や名前入力とみなす
+            GameResult result = gameService.processAnswer(userId, text);
 
-                    // subText(次の問題)がある ＝ 「謎解き正解」のとき → 緑のカード
-                    if (result.getSubText() != null) {
-                        return FlexMessageHelper.createCorrectMessage(result.getMainText(), // ストーリー（正解メッセージ）
-                                result.getSubText() // 次の問題
-                        );
-                    }
-                    // subTextがない ＝ 「名前登録完了」のとき → 青のカード
-                    else {
-                        return FlexMessageHelper.createQuestionMessage(result.getMainText() // 第1問の問題文
-                        );
-                    }
-
-                } else {
-                    // 不正解やエラーメッセージはテキストで返す
-                    return new TextMessage(result.getMainText());
+            if (result.getStatus() == GameResult.Status.SUCCESS) {
+                // subText(次の問題)がある ＝ 「謎解き正解」のとき → 緑のカード
+                if (result.getSubText() != null) {
+                    return FlexMessageHelper.createCorrectMessage(result.getMainText(), // ストーリー
+                            result.getSubText() // 次の問題
+                    );
                 }
+                // subTextがない ＝ 「名前登録完了」のとき → 青のカード
+                else {
+
+                    return FlexMessageHelper.createQuestionMessage(result.getMainText());
+                }
+
+            } else {
+                // 不正解やエラーメッセージ
+                return new TextMessage(result.getMainText());
             }
+
         } catch (Exception e) {
             log.error("ゲーム処理中にエラーが発生しました", e);
             return new TextMessage("エラーが発生しました: " + e.getMessage());

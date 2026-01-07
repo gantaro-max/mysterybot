@@ -1,6 +1,7 @@
 package com.gantaro.mysterybot.controller;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,9 @@ public class AdminController {
     private final EventAdminService eventAdminService;
     private final HttpSession session;
 
+    @Value("${line.bot.friend-url}")
+    private String botFriendUrl;
+
     // セッションチェック用のヘルパーメソッド
     private String getLoginGroupId() {
         return (String) session.getAttribute("loginGroupId");
@@ -37,6 +41,8 @@ public class AdminController {
 
         TeamGroup group = eventAdminService.getEvent(groupId);
         model.addAttribute("group", group);
+        // HTML側で使えるように変数を渡す
+        model.addAttribute("botFriendUrl", botFriendUrl);
         return "admin/dashboard";
     }
 
@@ -52,6 +58,7 @@ public class AdminController {
 
         model.addAttribute("group", group);
         model.addAttribute("ranking", ranking);
+
         return "admin/ranking";
     }
 

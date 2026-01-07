@@ -8,12 +8,38 @@
 <body class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <h2>ようこそ、<span th:text="${group.groupName}" class="text-primary"></span> 様</h2>
+        <h4>イベントID：［ <span th:text="${group.groupId}" class="text-primary"></span> ］</h4>
         <a href="/admin/logout" class="btn btn-outline-danger btn-sm">ログアウト</a>
     </div>
 
     <div class="alert alert-info">
         <strong>📣 参加方法:</strong><br>
-        LINE Botに「<strong>開始 <span th:text="${group.groupId}"></span></strong>」と送信してください。
+        参加者にQRコードを読み込んでもらい、友だち追加後に
+        「<strong>開始 <span th:text="${group.groupId}"></span></strong>」と送信するよう案内してください。
+    </div>
+
+    <div class="card mb-5 shadow-sm border-secondary">
+        <div class="card-header bg-dark text-white">
+            <i class="bi bi-qr-code-scan me-2"></i>参加用QRコード
+        </div>
+        <div class="card-body text-center py-4">
+            <p class="mb-3 text-muted">
+                このQRコードは<b>友だち追加用</b>です。<br>
+                （LINE公式のURLを使用しています）
+            </p>
+            
+            <div id="qrcode" class="d-flex justify-content-center mb-4"></div>
+            
+            <div class="alert alert-warning d-inline-block text-start" style="min-width: 300px;">
+                <h6 class="alert-heading fw-bold"><i class="bi bi-info-circle me-1"></i>参加手順</h6>
+                <small class="text-dark">① QRを読み込んで「追加」または「トーク」</small><br>
+                <small class="text-dark">② トーク画面で以下の合言葉を送信👇</small>
+                <hr class="my-2">
+                <div class="text-center bg-white p-2 rounded border border-warning">
+                    <strong class="fs-3 text-dark">開始 <span th:text="${group.groupId}"></span></strong>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row mt-5">
@@ -39,5 +65,20 @@
             </div>
         </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script th:inline="javascript">
+        const friendUrl = /*[[${botFriendUrl}]]*/ 'https://line.me/'; 
+        const groupId = /*[[${group.groupId}]]*/ 'demo';       
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: friendUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
 </body>
 </html>
