@@ -58,7 +58,7 @@ CREATE TABLE solved_histories (
 -- ==========================================
 
 -- デモ用グループを作る (ランダムOFFで作成)
-INSERT INTO team_groups (group_id, group_name, is_random_order) VALUES ('demo', 'デモ用謎解きイベント', FALSE);
+INSERT INTO team_groups (group_id, group_name, admin_pass, is_random_order) VALUES ('demo', 'デモ用謎解きイベント', '1234', FALSE);
 
 -- デモグループ用の謎を3問登録する
 INSERT INTO riddles (group_id, stage_no, question, answer, next_msg) 
