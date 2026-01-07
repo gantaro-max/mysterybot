@@ -4,11 +4,9 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-public class Progress {
+public class SolvedHistory {
     private Integer id;
     private Integer playerId;
     private Integer riddleId;
-    private Boolean isCleared;
-    private LocalDateTime clearedAt;
-
+    private LocalDateTime solvedAt;
 }
