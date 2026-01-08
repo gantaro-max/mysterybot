@@ -29,5 +29,11 @@
         WHERE group_id = #{groupId}
     </update>
 
+    <update id="updateStartedAt">
+        UPDATE team_groups
+        SET started_at = #{startedAt}
+        WHERE group_id = #{groupId}
+    </update>
+
 
 </mapper>

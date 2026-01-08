@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.entity;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -10,5 +11,6 @@ public class TeamGroup {
     private String adminPass;
     private LocalDateTime createdAt;
     private Boolean isRandomOrder;
+    private Timestamp startedAt;
 
 }
