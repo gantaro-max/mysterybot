@@ -56,6 +56,21 @@ public class GameService {
         if (findGroup.isEmpty())
             return new GameResult(GameResult.Status.FAILURE, "イベントが見つかりません", null);
 
+        TeamGroup group = findGroup.get();
+
+        // A. まだスイッチが押されていない場合
+        if (group.getStartedAt() == null) {
+            return new GameResult(GameResult.Status.TEXT_ONLY,
+                    "⛔ 準備中 ⛔\n" + "現在はまだ準備期間です。\n" + "幹事さんが管理画面で【開始ボタン】を押すまでお待ちください！", null);
+        }
+
+        // B. 24時間経過している場合
+        long diff = System.currentTimeMillis() - group.getStartedAt().getTime();
+        if (diff > 24 * 60 * 60 * 1000) { // 24時間 (ミリ秒)
+            return new GameResult(GameResult.Status.TEXT_ONLY,
+                    "🔚 終了 🔚\n" + "イベントの開催期間（24時間）が終了しました。\n" + "ご参加ありがとうございました！", null);
+        }
+
         Player player = playerRepository.findByLineUserAndGroup(lineUserId, groupId).orElse(null);
 
         if (player == null) {
@@ -85,9 +100,23 @@ public class GameService {
     // 2. 回答処理
     @Transactional
     public GameResult processAnswer(String lineUserId, String userText) {
-        Player player = playerRepository.findByLineUserId(lineUserId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "まだ参加していません 開始 [イベントID]」を入力し送信するか、開始用のQRコードを読み込んでください"));
+        Player player = playerRepository.findByLineUserId(lineUserId).orElseThrow(
+                () -> new IllegalArgumentException("まだ参加していません 開始 [イベントID]」を入力し送信してください"));
+
+        // プレイヤーが所属しているグループの情報を取得
+        TeamGroup group = teamGroupRepository.findByGroupId(player.getGroupId())
+                .orElseThrow(() -> new IllegalArgumentException("グループ情報が見つかりません"));
+
+        // A. 準備中の場合 (リセットなどで戻った場合など)
+        if (group.getStartedAt() == null) {
+            return new GameResult(GameResult.Status.TEXT_ONLY, "⛔ 準備中 ⛔\nイベントはまだ開始されていません。", null);
+        }
+
+        // B. 期限切れの場合
+        long diff = System.currentTimeMillis() - group.getStartedAt().getTime();
+        if (diff > 24 * 60 * 60 * 1000) {
+            return new GameResult(GameResult.Status.TEXT_ONLY, "🔚 終了 🔚\nイベント期間が終了しました。", null);
+        }
 
         if (player.getCurrentStage() == 0) {
             String name = userText.trim();

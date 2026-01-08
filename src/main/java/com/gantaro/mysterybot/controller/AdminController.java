@@ -133,4 +133,23 @@ public class AdminController {
         eventAdminService.updateEventSettings(groupId, isRandom != null);
         return "redirect:/admin/riddles";
     }
+
+    // 9. イベント開始処理 (スイッチON)
+    @PostMapping("/start-event")
+    public String startEvent(Model model) { // 引数を整理しました
+        String groupId = getLoginGroupId();
+        if (groupId == null)
+            return "redirect:/admin/login";
+
+        // すでに開始していないかチェック
+        TeamGroup group = eventAdminService.getEvent(groupId);
+        if (group.getStartedAt() != null) {
+            return "redirect:/admin/dashboard"; // 開始済みなら無視
+        }
+
+        // 開始！
+        eventAdminService.startEvent(groupId);
+
+        return "redirect:/admin/dashboard";
+    }
 }

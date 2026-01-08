@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.service;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -109,5 +110,13 @@ public class EventAdminService {
         if (isRandom == null)
             isRandom = false;
         teamGroupRepository.updateRandomMode(groupId, isRandom);
+    }
+
+    // イベントを開始する（スイッチON）
+    @Transactional
+    public void startEvent(String groupId) {
+        // 現在時刻をセット
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        teamGroupRepository.updateStartedAt(groupId, now);
     }
 }

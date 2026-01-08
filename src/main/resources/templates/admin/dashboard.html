@@ -19,6 +19,37 @@
         「<strong>開始 <span th:text="${group.groupId}"></span></strong>」と送信するよう案内してください。
     </div>
 
+    <div class="card mb-4 shadow-sm border-danger">
+        <div class="card-header bg-danger text-white">
+            <i class="bi bi-stopwatch me-2"></i>イベント進行管理
+        </div>
+        <div class="card-body text-center">
+            
+            <div th:if="${group.startedAt == null}">
+                <h4 class="text-secondary">🟠 現在は「準備期間」です</h4>
+                <p class="text-muted">
+                    参加者がLINEで話しかけても「準備中」と返されます。<br>
+                    幹事様のリハーサル（リセット）は可能ですが、本番は始まりません。
+                </p>
+                <hr>
+                <form action="/admin/start-event" method="post" onsubmit="return confirm('【確認】\n本当にイベントを開始しますか？\n\nここから24時間のカウントダウンが始まります！');">
+                    <button type="submit" class="btn btn-danger btn-lg px-5">
+                        🚀 イベントを本番開始する
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${group.startedAt != null}">
+                <h3 class="text-success fw-bold">🟢 イベント開催中</h3>
+                <p class="mb-0">開始時刻: <span th:text="${#dates.format(group.startedAt, 'yyyy/MM/dd HH:mm')}"></span></p>
+                <div class="alert alert-success mt-3 py-1">
+                    現在、プレイヤーは自由にゲームに参加できます。
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <div class="card mb-5 shadow-sm border-secondary">
         <div class="card-header bg-dark text-white">
             <i class="bi bi-qr-code-scan me-2"></i>参加用QRコード

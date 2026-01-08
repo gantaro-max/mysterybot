@@ -11,7 +11,8 @@ CREATE TABLE team_groups (
     group_name VARCHAR(100) NOT NULL,
     admin_pass VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_random_order BOOLEAN DEFAULT FALSE -- ランダム出題モード設定
+    is_random_order BOOLEAN DEFAULT FALSE, -- ランダム出題モード設定
+    started_at DATETIME DEFAULT NULL
 );
 
 -- 2. 謎・問題マスタテーブル

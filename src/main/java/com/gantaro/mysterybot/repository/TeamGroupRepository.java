@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.repository;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
@@ -16,5 +17,7 @@ public interface TeamGroupRepository {
     void insert(TeamGroup teamGroup);
 
     void updateRandomMode(@Param("groupId") String groupId, @Param("isRandom") Boolean isRandom);
+
+    void updateStartedAt(@Param("groupId") String groupId, @Param("startedAt") Timestamp startedAt);
 
 }
