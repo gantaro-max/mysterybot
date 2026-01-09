@@ -1,0 +1,12 @@
+package com.gantaro.mysterybot.entity;
+
+import lombok.Data;
+
+@Data
+public class RiddleImage {
+
+    private Integer id;
+    private byte[] data;
+    private String mimeType;
+
+}

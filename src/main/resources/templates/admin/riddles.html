@@ -54,6 +54,9 @@
             <a href="/admin/dashboard" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>ダッシュボードに戻る
             </a>
+            <a href="/admin/catalog" class="btn btn-warning ms-2">
+                <i class="bi bi-book me-1"></i>カタログから選ぶ
+            </a>
             <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRiddleModal">
                 <i class="bi bi-plus-lg me-1"></i>新しい問題を追加
             </button>
@@ -147,23 +150,34 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="/admin/riddles/add" method="post">
-                        
-                        <div class="mb-4">
+                    <form action="/admin/riddles/add" method="post" enctype="multipart/form-data">
+    
+                        <div class="mb-3">
                             <label class="form-label fw-bold">問題文 (LINEで送信されます)</label>
                             <textarea name="question" class="form-control" rows="3" required placeholder="例: パンはパンでも..."></textarea>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">画像 (任意)</label>
+                            <input type="file" name="imageFile" class="form-control" accept="image/*">
+                            <div class="form-text">※jpg, pngなどが使えます。</div>
+                        </div>
                         
                         <div class="row">
-                            <div class="col-md-6 mb-4">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">正解キーワード</label>
                                 <input type="text" name="answer" class="form-control" required placeholder="例: フライパン">
-                                <small class="text-muted">※ひらがな・カタカナ・大文字小文字は区別されません</small>
+                                <small class="text-muted">※カンマ区切りで複数可 (例: りんご,リンゴ)</small>
                             </div>
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label fw-bold">正解時のメッセージ (次のストーリー)</label>
-                                <textarea name="nextMsg" class="form-control" rows="4" required placeholder="例: 正解！&#13;&#10;次の手がかりは..."></textarea>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">正解時のメッセージ</label>
+                                <textarea name="nextMsg" class="form-control" rows="3" required placeholder="例: 正解！次の手がかりは..."></textarea>
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ヒント (任意)</label>
+                            <input type="text" name="hintMsg" class="form-control" placeholder="例: 台所にあるものです">
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">

@@ -12,12 +12,31 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form action="/admin/riddles/update" method="post">
+            <form action="/admin/riddles/update" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="id" th:value="${riddle.id}">
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">問題文</label>
                     <textarea name="question" class="form-control" rows="3" required th:text="${riddle.question}"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">画像</label>
+                    
+                    <div th:if="${riddle.imageId}" class="mb-2">
+                        <img th:src="@{/public/image/{id}(id=${riddle.imageId})}" 
+                             class="img-thumbnail" style="max-height: 150px;">
+                        <span class="text-muted ms-2 small">現在の画像</span>
+                    </div>
+
+                    <input type="file" name="imageFile" class="form-control" accept="image/*">
+                    <div class="form-text">※新しい画像を選択すると上書きされます。変更しない場合はそのままでOKです。</div>
+                </div>
+                
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ヒント</label>
+                    <input type="text" name="hintMsg" class="form-control" th:value="${riddle.hintMsg}">
                 </div>
 
                 <div class="row">

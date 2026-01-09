@@ -16,4 +16,5 @@ public class GameResult {
     private Status status;
     private String mainText; // ストーリー文や返信メッセージ
     private String subText; // 次の問題文（正解時のみ使用）
+    private Integer imageId; // 画像がある場合はここにIDが入る
 }
