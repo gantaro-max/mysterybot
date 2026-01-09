@@ -25,7 +25,7 @@
     </insert>
 
     <update id="update" parameterType="com.gantaro.mysterybot.entity.Riddle">
-        UPDATE riddles SET question = #{question}, answer = #{answer}, next_msg = #{nextMsg} WHERE id = #{id}
+        UPDATE riddles SET question = #{question}, answer = #{answer}, next_msg = #{nextMsg}, hint_msg = #{hintMsg}, image_id = #{imageId} WHERE id = #{id}
     </update>
 
     <delete id="delete">
