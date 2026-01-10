@@ -6,6 +6,7 @@ import lombok.Data;
 public class RiddleImage {
 
     private Integer id;
+    private String uuid;
     private byte[] data;
     private String mimeType;
 

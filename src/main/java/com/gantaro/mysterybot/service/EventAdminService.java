@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -169,6 +170,7 @@ public class EventAdminService {
         RiddleImage img = new RiddleImage();
         img.setData(savedData);
         img.setMimeType(contentType);
+        img.setUuid(UUID.randomUUID().toString());
         riddleImageRepository.insert(img);
 
         return img.getId();

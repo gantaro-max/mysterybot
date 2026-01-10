@@ -5,7 +5,10 @@
 <mapper namespace="com.gantaro.mysterybot.repository.RiddleRepository">
 
     <select id="findByGroupIdAndStageNo" resultType="com.gantaro.mysterybot.entity.Riddle">
-        SELECT * FROM riddles WHERE group_id = #{groupId} AND stage_no = #{stageNo}
+        SELECT r.*, i.uuid AS image_uuid 
+        FROM riddles r
+        LEFT JOIN riddle_images i ON r.image_id = i.id
+        WHERE r.group_id = #{groupId} AND r.stage_no = #{stageNo}
     </select>
 
     <select id="countByGroup" resultType="int">
@@ -13,11 +16,17 @@
     </select>
 
     <select id="findAllByGroup" resultType="com.gantaro.mysterybot.entity.Riddle">
-        SELECT * FROM riddles WHERE group_id = #{groupId}
+        SELECT r.*, i.uuid AS image_uuid 
+        FROM riddles r
+        LEFT JOIN riddle_images i ON r.image_id = i.id
+        WHERE r.group_id = #{groupId}
     </select>
 
     <select id="findById" resultType="com.gantaro.mysterybot.entity.Riddle">
-        SELECT * FROM riddles WHERE id = #{id}
+        SELECT r.*, i.uuid AS image_uuid 
+        FROM riddles r
+        LEFT JOIN riddle_images i ON r.image_id = i.id
+        WHERE r.id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Riddle">

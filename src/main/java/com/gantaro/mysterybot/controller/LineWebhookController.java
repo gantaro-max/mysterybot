@@ -79,9 +79,9 @@ public class LineWebhookController {
                     GameResult result = gameService.joinGame(userId, parts[1]);
 
                     if (result.getStatus() == GameResult.Status.SUCCESS) {
-                        // ヘルパーを呼ぶ
+                        // ★修正: IDではなくUUIDを渡す
                         return FlexMessageHelper.createQuestionMessage(result.getMainText(),
-                                result.getImageId());
+                                result.getImageUuid());
                     } else {
                         return new TextMessage(result.getMainText());
                     }
@@ -97,14 +97,15 @@ public class LineWebhookController {
             if (result.getStatus() == GameResult.Status.SUCCESS) {
                 // subText(次の問題)がある ＝ 「謎解き正解」のとき → 緑のカード
                 if (result.getSubText() != null) {
+                    // ★修正: IDではなくUUIDを渡す
                     return FlexMessageHelper.createCorrectMessage(result.getMainText(),
-                            result.getSubText(), result.getImageId());
+                            result.getSubText(), result.getImageUuid());
                 }
                 // subTextがない ＝ 「名前登録完了」のとき → 青のカード
                 else {
-
+                    // ★修正: IDではなくUUIDを渡す
                     return FlexMessageHelper.createQuestionMessage(result.getMainText(),
-                            result.getImageId());
+                            result.getImageUuid());
                 }
 
             } else {

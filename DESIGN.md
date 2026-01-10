@@ -22,6 +22,7 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 * **ダッシュボード:** イベントの状態確認、開始操作、参加用QRコードの表示。
 * **シナリオ編集 (CRUD):**
     * 問題文、正解、ヒント、画像、次メッセージの登録・編集。
+    * 画像アップロード時、自動的にリサイズ・軽量化を行う。
     * 「カタログ」からの問題インポート機能。
 * **設定変更:** 出題順（順番通り/ランダム）の切り替え。
 * **進捗確認:** ランキングボード（リアルタイム順位表）の表示。
@@ -32,18 +33,19 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 * **正誤判定:** Botによる自動判定と即時返信（正解時は次の問題/画像を送信）。
 * **ヒント機能:** 「ヒント」と送ることで設定されたヒントを閲覧可能。
 * **途中再開:** 進行状況の自動保存。
+* **遊び方ガイド:** 「遊び方」や「ヘルプ」コマンドでのガイド表示。
 
 ### 2.3 非機能要件
-* **レスポンス:** LINE返信の即応性（非同期処理は含まず、同期的かつ高速に返す）。
-* **画像処理:** アップロードされた高画質画像は、自動的に軽量化（リサイズ）してDB保存する。
-* **セキュリティ:** セッションベースのログイン認証。権限によるURLアクセス制御。
+* **レスポンス:** LINE返信の即応性。
+* **セキュリティ:** * 管理画面: セッションベースのログイン認証。権限によるURLアクセス制御。
+    * 画像アクセス: 推測不可能なUUIDを使用した公開URL (`/public/image/{uuid}`) を採用し、連番IDによる不正閲覧（ネタバレ）を防止する。
 
 ---
 
 ## 3. 基本設計 (Basic Design)
 
 ### 3.1 アーキテクチャ
-* **Backend:** Java 21, Spring Boot 4.01
+* **Backend:** Java 21, Spring Boot 3.x
 * **Frontend:** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
 * **Database:** MySQL 8.0 (Docker / TiDB Serverless)
 * **ORM:** MyBatis
@@ -58,7 +60,7 @@ URLプレフィックスにより役割を明確に分離する。
 | **管理者** | `/admin` | `AdminController` | 全体管理、マスタ管理、ゴッドログイン |
 | **主催者** | `/user` | `UserController` | イベント管理、シナリオ編集、ランキング |
 | **Bot** | `/callback` | `LineWebhookController` | LINE Webhookの受信・処理 |
-| **画像** | `/public` | `ImageController` | 画像配信 (認証不要) |
+| **画像** | `/public` | `ImageController` | 画像配信 (認証不要・UUIDアクセス) |
 
 ---
 
@@ -88,6 +90,7 @@ URLプレフィックスにより役割を明確に分離する。
 | `question` | TEXT | 問題文 |
 | `answer` | VARCHAR | 正解 (カンマ区切りで複数可) |
 | `hint_msg` | VARCHAR | ヒントメッセージ |
+| `next_msg` | TEXT | 正解時のメッセージ |
 | `image_id` | INT(FK) | 画像ID (riddle_images参照) |
 
 ### 4.3 players (参加者)
@@ -97,14 +100,17 @@ URLプレフィックスにより役割を明確に分離する。
 | `line_user_id` | VARCHAR | LINE User ID |
 | `group_id` | VARCHAR(FK) | 参加イベント |
 | `current_stage` | INT | 現在の進行度 |
+| `player_name` | VARCHAR | チーム名/個人名 |
 | `start_at` | DATETIME | 開始時刻 |
 | `finished_at` | DATETIME | 全問クリア時刻 |
+| `current_riddle_id`| INT | 現在挑戦中の問題ID（ランダムモード用）|
 
 ### 4.4 riddle_images (画像ストレージ)
 | Column | Type | Description |
 | :--- | :--- | :--- |
-| `id` | INT(PK) | 画像ID |
-| `data` | LONGBLOB | 画像バイナリデータ (リサイズ済) |
+| `id` | INT(PK) | 内部管理ID (JOIN用) |
+| `uuid` | VARCHAR(36) | **公開用ID (URLに使用)** |
+| `data` | LONGBLOB | 画像バイナリデータ |
 | `mime_type` | VARCHAR | MIMEタイプ (image/jpeg等) |
 
 ### 4.5 master_riddles (カタログ用マスタ)
@@ -112,7 +118,7 @@ URLプレフィックスにより役割を明確に分離する。
 | :--- | :--- | :--- |
 | `id` | INT(PK) | マスタID |
 | `category` | VARCHAR | カテゴリ (初級, 結婚式等) |
-| `question`, `answer`... | - | 問題データ一式 |
+| `question`... | - | 問題データ一式 |
 
 ---
 
@@ -120,7 +126,7 @@ URLプレフィックスにより役割を明確に分離する。
 
 ### 5.1 認証 (`AuthController`)
 * `GET /auth/login` : ログイン画面
-* `POST /auth/login` : ログイン処理 (Roleによりリダイレクト先を分岐)
+* `POST /auth/login` : ログイン処理
 * `GET /auth/register` : 新規イベント作成画面
 * `POST /auth/register` : イベント作成処理
 
@@ -132,7 +138,7 @@ URLプレフィックスにより役割を明確に分離する。
 
 ### 5.3 イベント主催者 (`UserController`)
 * `GET /user/dashboard` : イベント管理トップ
-* `POST /user/start-event` : イベント本番開始 (フラグ更新)
+* `POST /user/start-event` : イベント本番開始
 * `GET /user/riddles` : シナリオ一覧
 * `POST /user/riddles/add` : 謎の新規登録 (画像Upload含む)
 * `POST /user/riddles/update` : 謎の更新
@@ -140,20 +146,23 @@ URLプレフィックスにより役割を明確に分離する。
 * `GET /user/catalog` : カタログ一覧表示
 * `POST /user/catalog/import` : カタログから自イベントへコピー
 
+### 5.4 画像配信 (`ImageController`)
+* `GET /public/image/{uuid}` : 画像データの配信 (UUIDによるアクセス)
+
 ---
 
 ## 6. クラス設計 (主要コンポーネント)
 
 ### Controller
-* **`AuthController`**: 認証とセッション管理を担当。
-* **`AdminController`**: スーパーAdmin権限が必要な操作を担当。
-* **`UserController`**: 一般主催者の操作全般を担当。
-* **`LineWebhookController`**: LINEからのPOSTリクエストを受け取り、`GameService`へ委譲。
-* **`ImageController`**: DB内の画像バイナリをHTTPレスポンスとして返す。
+* **`AuthController`**: 認証とセッション管理。
+* **`AdminController`**: スーパーAdmin操作。
+* **`UserController`**: 一般主催者の操作。
+* **`LineWebhookController`**: LINE Botのリクエスト処理。
+* **`ImageController`**: 画像バイナリの配信。
 
 ### Service
-* **`EventAdminService`**: 管理画面側の全ロジック（CRUD、画像処理、認証、インポート等）を集約。
-* **`GameService`**: Bot側のゲーム進行ロジック（回答判定、ステージ進行、リセット等）を集約。
+* **`EventAdminService`**: 管理画面側の全ロジック（CRUD、画像UUID発行、認証等）。
+* **`GameService`**: Bot側のゲーム進行ロジック。
 
 ### Util
-* **`FlexMessageHelper`**: JavaのMap構造からLINE Flex Message JSONへの変換を担当。
+* **`FlexMessageHelper`**: LINE Flex Message JSONへの変換（UUIDベースのURL生成を含む）。
