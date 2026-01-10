@@ -21,7 +21,7 @@
     </select>
 
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.Riddle">
-        INSERT INTO riddles (group_id,stage_no,question,answer,next_msg) VALUES (#{groupId},#{stageNo},#{question},#{answer},#{nextMsg})
+        INSERT INTO riddles (group_id,stage_no,question,answer,next_msg,image_id,hint_msg) VALUES (#{groupId},#{stageNo},#{question},#{answer},#{nextMsg},#{imageId},#{hintMsg})
     </insert>
 
     <update id="update" parameterType="com.gantaro.mysterybot.entity.Riddle">

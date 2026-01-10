@@ -79,9 +79,8 @@ public class UserController {
     // 4. 謎の登録 (★修正: 画像とヒントに対応)
     @PostMapping("/riddles/add")
     public String addRiddle(@RequestParam String question, @RequestParam String answer,
-            @RequestParam String nextMsg, @RequestParam(required = false) String hintMsg, // ★追加
-            @RequestParam(required = false) MultipartFile imageFile // ★追加
-    ) throws IOException { // ★追加
+            @RequestParam String nextMsg, @RequestParam(required = false) String hintMsg,
+            @RequestParam(required = false) MultipartFile imageFile) throws IOException {
         String groupId = getLoginGroupId();
         if (groupId == null)
             return "redirect:/auth/login";
