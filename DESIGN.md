@@ -8,32 +8,35 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 ## 2. 要件定義 (Requirements)
 
 ### 2.1 ターゲットユーザー
-1.  **管理者 (Game Master):** 謎解きイベントを主催したい人。Web管理画面から問題を作成・管理する。
-2.  **プレイヤー (Player):** LINEを使って謎解きに参加する一般ユーザー。
+1.  **アプリ管理者 (Super Admin):** プラットフォーム全体の管理者。全イベントの監視・管理権限を持つ。
+2.  **イベント主催者 (Organizer):** 謎解きイベントを主催する幹事。自身のイベントのシナリオ作成・進行管理を行う。
+3.  **プレイヤー (Player):** LINEを使って謎解きに参加する一般ユーザー。
 
 ### 2.2 機能要件
-#### 【管理者機能】 (Webブラウザ管理画面)
-* **イベント（グループ）管理:**
-    * 新しいイベントID（例: `demo`）と、開始キーワードの発行。
-    * 既存イベントの一覧表示。
-* **謎の登録・編集・削除 (CRUD):**
-    * イベントごとの問題文、正解キーワード、ヒント、順序（第何問目か）をフォームから登録する。
-* **進捗確認:**
-    * どのプレイヤーが今どこまで進んでいるかを表形式で確認できる。
+#### 【アプリ管理者機能】 (`/admin`)
+* **全イベント管理:** 稼働中の全イベント一覧表示、強制削除。
+* **ゴッドログイン (God Login):** パスワードなしで任意のイベント管理画面へログインし、代理操作を行う。
+* **カタログ管理:** 全イベントで共有可能な「マスター問題」の登録・管理。
+
+#### 【イベント主催者機能】 (`/user`)
+* **ダッシュボード:** イベントの状態確認、開始操作、参加用QRコードの表示。
+* **シナリオ編集 (CRUD):**
+    * 問題文、正解、ヒント、画像、次メッセージの登録・編集。
+    * 「カタログ」からの問題インポート機能。
+* **設定変更:** 出題順（順番通り/ランダム）の切り替え。
+* **進捗確認:** ランキングボード（リアルタイム順位表）の表示。
 
 #### 【プレイヤー機能】 (LINE Bot)
-* **ゲーム開始:**
-    * QRコード等を読み込み、特定の「イベントID」に紐づくゲームを開始する（例:「開始 demo」と送信）。
-* **回答送信:**
-    * LINEのトーク画面で答えを入力する。
-* **正誤判定 (自動):**
-    * Botが答えを照合し、「正解！次の問題へ」または「不正解」を即座に返信する。
-* **進捗保存:**
-    * 途中離脱しても、続きから再開できる。
+* **ゲーム開始:** 「開始 [イベントID]」コマンドによるゲーム参加。
+* **回答送信:** LINEトーク画面での回答入力。
+* **正誤判定:** Botによる自動判定と即時返信（正解時は次の問題/画像を送信）。
+* **ヒント機能:** 「ヒント」と送ることで設定されたヒントを閲覧可能。
+* **途中再開:** 進行状況の自動保存。
 
 ### 2.3 非機能要件
-* **レスポンス速度:** LINEの返信は3秒以内に行う。
-* **UI/UX (管理画面):** PC/タブレットブラウザで操作可能なレスポンシブデザイン (Bootstrap採用)。
+* **レスポンス:** LINE返信の即応性（非同期処理は含まず、同期的かつ高速に返す）。
+* **画像処理:** アップロードされた高画質画像は、自動的に軽量化（リサイズ）してDB保存する。
+* **セキュリティ:** セッションベースのログイン認証。権限によるURLアクセス制御。
 
 ---
 
@@ -41,126 +44,116 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 
 ### 3.1 アーキテクチャ
 * **Backend:** Java 21, Spring Boot 4.01
-* **Frontend (Admin):** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
-* **Database:** MySQL 8.0 (Docker)
+* **Frontend:** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
+* **Database:** MySQL 8.0 (Docker / TiDB Serverless)
 * **ORM:** MyBatis
-* **Interface:** LINE Messaging API (Webhook)
+* **Messaging:** LINE Messaging API (Webhook / Flex Message)
 
-### 3.2 処理フロー
-**【LINE Botフロー】**
-1.  **User** -> (メッセージ送信) -> **LINE Platform**
-2.  **LINE Platform** -> (Webhook POST) -> **Spring Boot (LineWebhookController)**
-3.  **Controller** -> **Service** (メッセージ解析・正誤判定ロジック)
-4.  **Service** -> **Mapper** (DB問い合わせ: 正解取得・進捗更新)
-5.  **Service** -> **LINE SDK** (返信メッセージ生成)
-6.  **Spring Boot** -> (API Call) -> **LINE Platform** -> **User**
+### 3.2 ディレクトリ構成 (Controller層)
+URLプレフィックスにより役割を明確に分離する。
 
-**【管理画面フロー】**
-1.  **Admin User** -> (ブラウザ・GET) -> **Spring Boot (AdminController)**
-2.  **AdminController** -> **Service** (DBデータ取得)
-3.  **AdminController** -> **Thymeleaf Template** (HTML生成) -> **Admin User**
+| Role | Prefix | Controller Class | Description |
+| :--- | :--- | :--- | :--- |
+| **認証** | `/auth` | `AuthController` | ログイン、ログアウト、新規登録 |
+| **管理者** | `/admin` | `AdminController` | 全体管理、マスタ管理、ゴッドログイン |
+| **主催者** | `/user` | `UserController` | イベント管理、シナリオ編集、ランキング |
+| **Bot** | `/callback` | `LineWebhookController` | LINE Webhookの受信・処理 |
+| **画像** | `/public` | `ImageController` | 画像配信 (認証不要) |
 
 ---
 
 ## 4. テーブル設計 (Schema Design)
 
-マルチテナント（グループ分け）を実現するためのDB構造。
+### ER図 (概要)
+* `team_groups` (1) --- (N) `riddles`
+* `team_groups` (1) --- (N) `players`
+* `players` (1) --- (N) `solved_histories`
+* `riddles` (N) --- (1) `riddle_images` (Optional)
 
-### ER図 (イメージ)
-`team_groups` --(1:N)--> `riddles`
-`team_groups` --(1:N)--> `players`
-`players` --(1:N)--> `progress`
-
-### 4.1 team_groups (イベント・グループ管理)
-イベントごとの設定を持つ親テーブル。
-
-| Column Name | Type | Key | Description |
-| :--- | :--- | :--- | :--- |
-| `group_id` | VARCHAR(50) | PK | グループ識別子 (例: "company_a", "wedding_2024") |
-| `group_name` | VARCHAR(100)| | イベント名 |
-| `admin_pass` | VARCHAR(255)| | 簡易認証用パスワード |
-| `created_at` | DATETIME | | 作成日時 |
-
-### 4.2 riddles (謎・問題マスタ)
-問題の中身。`group_id` と `stage_no` で一意になる。
-
-| Column Name | Type | Key | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | INT | PK | 自動採番ID |
-| `group_id` | VARCHAR(50) | FK | どのグループの問題か |
-| `stage_no` | INT | | 第何問目か (1, 2, 3...) |
-| `question` | TEXT | | 問題文 (画像URL等も可) |
-| `answer` | VARCHAR(255)| | 正解キーワード (完全一致/正規表現) |
-| `next_msg` | TEXT | | 正解時のメッセージ (次のストーリー) |
-
-### 4.3 players (プレイヤー情報)
-LINEユーザーと、現在参加しているグループの紐付け。
-
-| Column Name | Type | Key | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | INT | PK | 自動採番ID |
-| `line_user_id`| VARCHAR(255)| | LINEの固有ID (Uxxxxxxxx...) |
-| `group_id` | VARCHAR(50) | FK | 現在参加中のイベント |
-| `current_stage`| INT | | 現在挑戦中のステージ番号 (初期値: 1) |
-| `last_active` | DATETIME | | 最終アクセス日時 |
-
-### 4.4 progress (回答履歴・ログ)
-誰がいつ、どの問題をクリアしたか。
-
-| Column Name | Type | Key | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | INT | PK | 自動採番ID |
-| `player_id` | INT | FK | プレイヤーID |
-| `riddle_id` | INT | FK | 解いた問題ID |
-| `is_cleared` | BOOLEAN | | クリアフラグ |
-| `cleared_at` | DATETIME | | クリア日時 |
-
----
-
-## 5. 詳細設計 (Endpoints)
-
-### 5.1 管理画面用エンドポイント (Web UI)
-
-| Method | Path | Description | Template File |
-| :--- | :--- | :--- | :--- |
-| **GET** | `/admin` | 管理画面トップ（イベント一覧）を表示 | `admin/index.html` |
-| **GET** | `/admin/create` | 新規イベント作成フォームを表示 | `admin/create.html` |
-| **POST** | `/admin/create` | フォーム入力値を受け取り、イベントをDB保存 | (Redirect to /admin) |
-| **GET** | `/admin/riddles/{groupId}` | 特定イベントの謎一覧・登録画面 (予定) | `admin/riddles.html` |
-
-### 5.2 LINE Webhook
-
-| Method | Path | Description |
+### 4.1 team_groups (イベント管理)
+| Column | Type | Description |
 | :--- | :--- | :--- |
-| **POST** | `/callback` | LINEからのイベント受信 (Botの入り口) |
+| `group_id` | VARCHAR(PK) | イベントID (例: wedding2024) |
+| `group_name` | VARCHAR | イベント名 |
+| `admin_pass` | VARCHAR | 管理用パスワード |
+| `is_random_order` | BOOLEAN | ランダム出題モードフラグ |
+| `started_at` | DATETIME | イベント開始日時 (nullなら準備中) |
+
+### 4.2 riddles (シナリオデータ)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | INT(PK) | 自動採番 |
+| `group_id` | VARCHAR(FK) | 所属イベント |
+| `stage_no` | INT | 出題順序 |
+| `question` | TEXT | 問題文 |
+| `answer` | VARCHAR | 正解 (カンマ区切りで複数可) |
+| `hint_msg` | VARCHAR | ヒントメッセージ |
+| `image_id` | INT(FK) | 画像ID (riddle_images参照) |
+
+### 4.3 players (参加者)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | INT(PK) | 自動採番 |
+| `line_user_id` | VARCHAR | LINE User ID |
+| `group_id` | VARCHAR(FK) | 参加イベント |
+| `current_stage` | INT | 現在の進行度 |
+| `start_at` | DATETIME | 開始時刻 |
+| `finished_at` | DATETIME | 全問クリア時刻 |
+
+### 4.4 riddle_images (画像ストレージ)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | INT(PK) | 画像ID |
+| `data` | LONGBLOB | 画像バイナリデータ (リサイズ済) |
+| `mime_type` | VARCHAR | MIMEタイプ (image/jpeg等) |
+
+### 4.5 master_riddles (カタログ用マスタ)
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | INT(PK) | マスタID |
+| `category` | VARCHAR | カテゴリ (初級, 結婚式等) |
+| `question`, `answer`... | - | 問題データ一式 |
 
 ---
 
-## 6. クラス設計 (Java/Spring Boot)
+## 5. エンドポイント設計 (Endpoints)
 
-### Package Structure
-```text
-com.gantaro.mysterybot
-├── controller
-│   ├── AdminController.java      <-- (HTMLを返すコントローラー: 画面遷移担当)
-│   └── LineWebhookController.java <-- (LINE Messaging API担当)
-├── service
-│   ├── GameService.java          <-- (Botのゲーム進行ロジック)
-│   ├── AdminService.java         <-- (管理画面用のデータ操作ロジック)
-│   └── PlayerService.java
-├── repository (MyBatis Mapper)
-│   ├── GroupRepository.java
-│   ├── RiddleRepository.java
-│   ├── PlayerRepository.java
-│   └── ProgressRepository.java
-├── entity (Data Model)
-│   ├── Group.java
-│   ├── Riddle.java
-│   ├── Player.java
-│   └── Progress.java
-└── resources
-    └── templates                 <-- (Thymeleaf HTMLファイル置き場)
-        └── admin
-            ├── index.html        (イベント一覧画面)
-            ├── create.html       (イベント作成画面)
-            └── riddles.html      (謎管理画面: 今後作成)
+### 5.1 認証 (`AuthController`)
+* `GET /auth/login` : ログイン画面
+* `POST /auth/login` : ログイン処理 (Roleによりリダイレクト先を分岐)
+* `GET /auth/register` : 新規イベント作成画面
+* `POST /auth/register` : イベント作成処理
+
+### 5.2 アプリ管理者 (`AdminController`)
+* `GET /admin/dashboard` : 統合管理ダッシュボード
+* `POST /admin/impersonate/{groupId}` : 指定イベントへなりすましログイン
+* `POST /admin/delete/{groupId}` : イベント強制削除
+* `POST /admin/catalog/add-master` : カタログへの問題登録
+
+### 5.3 イベント主催者 (`UserController`)
+* `GET /user/dashboard` : イベント管理トップ
+* `POST /user/start-event` : イベント本番開始 (フラグ更新)
+* `GET /user/riddles` : シナリオ一覧
+* `POST /user/riddles/add` : 謎の新規登録 (画像Upload含む)
+* `POST /user/riddles/update` : 謎の更新
+* `GET /user/ranking` : リアルタイムランキング表示
+* `GET /user/catalog` : カタログ一覧表示
+* `POST /user/catalog/import` : カタログから自イベントへコピー
+
+---
+
+## 6. クラス設計 (主要コンポーネント)
+
+### Controller
+* **`AuthController`**: 認証とセッション管理を担当。
+* **`AdminController`**: スーパーAdmin権限が必要な操作を担当。
+* **`UserController`**: 一般主催者の操作全般を担当。
+* **`LineWebhookController`**: LINEからのPOSTリクエストを受け取り、`GameService`へ委譲。
+* **`ImageController`**: DB内の画像バイナリをHTTPレスポンスとして返す。
+
+### Service
+* **`EventAdminService`**: 管理画面側の全ロジック（CRUD、画像処理、認証、インポート等）を集約。
+* **`GameService`**: Bot側のゲーム進行ロジック（回答判定、ステージ進行、リセット等）を集約。
+
+### Util
+* **`FlexMessageHelper`**: JavaのMap構造からLINE Flex Message JSONへの変換を担当。
