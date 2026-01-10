@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Controller
-@RequestMapping("/admin")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -21,7 +21,7 @@ public class AuthController {
     // ログイン画面
     @GetMapping("/login")
     public String loginPage() {
-        return "admin/login";
+        return "auth/login";
     }
 
     // ログイン処理
@@ -29,10 +29,15 @@ public class AuthController {
     public String login(@RequestParam String groupId, @RequestParam String password, Model model) {
         if (eventAdminService.login(groupId, password)) {
             session.setAttribute("loginGroupId", groupId);
-            return "redirect:/admin/dashboard";
+
+            if ("admin".equals(groupId)) {
+                return "redirect:/admin/dashboard"; // アプリ管理者へ
+            } else {
+                return "redirect:/user/dashboard"; // イベント主催者へ
+            }
         } else {
             model.addAttribute("error", "IDまたはパスワードが違います");
-            return "admin/login";
+            return "auth/login";
         }
     }
 
@@ -40,13 +45,13 @@ public class AuthController {
     @GetMapping("/logout")
     public String logout() {
         session.invalidate();
-        return "redirect:/admin/login";
+        return "redirect:/auth/login";
     }
 
     // 新規登録画面
     @GetMapping("/register")
     public String registerPage() {
-        return "admin/register";
+        return "auth/register";
     }
 
     // 新規登録処理
@@ -57,10 +62,10 @@ public class AuthController {
             eventAdminService.createEvent(groupId, groupName, password);
             // 登録成功したらそのままログイン
             session.setAttribute("loginGroupId", groupId);
-            return "redirect:/admin/dashboard";
+            return "redirect:/user/dashboard";
         } catch (Exception e) {
             model.addAttribute("error", "登録失敗: IDが重複している可能性があります");
-            return "admin/register";
+            return "auth/register";
         }
     }
 }
