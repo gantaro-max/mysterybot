@@ -16,9 +16,9 @@ import lombok.RequiredArgsConstructor;
 public class ImageController {
     private final RiddleImageRepository riddleImageRepository;
 
-    @GetMapping("/public/image/{id}")
-    public ResponseEntity<byte[]> getImage(@PathVariable("id") Integer id) {
-        Optional<RiddleImage> riddleImage = riddleImageRepository.findById(id);
+    @GetMapping("/public/image/{uuid}")
+    public ResponseEntity<byte[]> getImage(@PathVariable("uuid") String uuid) {
+        Optional<RiddleImage> riddleImage = riddleImageRepository.findByUuid(uuid);
         if (riddleImage.isEmpty())
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 

@@ -17,13 +17,31 @@ public class FlexMessageHelper {
         private static final ObjectMapper objectMapper = ModelObjectMapper.createNewObjectMapper();
 
         // 正解返信用のカード
+        // ★修正: 第3引数を Integer から String (UUID) に変更
         public static Message createCorrectMessage(String storyText, String nextQuestionText,
-                        Integer nextImageId) {
+                        String nextImageUuid) {
                 try {
+                        Map<String, Object> bubble = new HashMap<>();
+                        bubble.put("type", "bubble");
+
+                        // -------------------------------------------------
+                        // ★追加: 画像ブロック (Hero)
+                        // -------------------------------------------------
+                        // 次の問題の画像がある場合は、正解カードの上部に表示する
+                        if (nextImageUuid != null) {
+                                Map<String, Object> hero = new HashMap<>();
+                                hero.put("type", "image");
+                                // ★修正: UUIDを使った公開用URL
+                                hero.put("url", APP_URL + "/public/image/" + nextImageUuid);
+                                hero.put("size", "full");
+                                hero.put("aspectRatio", "16:9");
+                                hero.put("aspectMode", "cover");
+                                bubble.put("hero", hero);
+                        }
+
                         // -------------------------------------------------
                         // 1. ヘッダー (STAGE CLEAR)
                         // -------------------------------------------------
-                        // JSON: { "type": "box", "layout": "vertical", ... }
                         Map<String, Object> header = new HashMap<>();
                         header.put("type", "box");
                         header.put("layout", "vertical");
@@ -37,6 +55,7 @@ public class FlexMessageHelper {
                         titleText.put("align", "center");
 
                         header.put("contents", List.of(titleText));
+                        bubble.put("header", header); // ★修正: 作成したheaderをbubbleに追加
 
                         // -------------------------------------------------
                         // 2. 本文 (ストーリー)
@@ -53,6 +72,7 @@ public class FlexMessageHelper {
                         story.put("color", "#555555");
 
                         body.put("contents", List.of(story));
+                        bubble.put("body", body); // ★修正: 作成したbodyをbubbleに追加
 
                         // -------------------------------------------------
                         // 3. フッター (次の問題)
@@ -77,25 +97,16 @@ public class FlexMessageHelper {
                         nextQText.put("align", "center");
 
                         footer.put("contents", List.of(labelText, nextQText));
+                        bubble.put("footer", footer); // ★修正: 作成したfooterをbubbleに追加
 
                         // -------------------------------------------------
-                        // 4. Bubble (全体)
-                        // -------------------------------------------------
-                        Map<String, Object> bubble = new HashMap<>();
-                        bubble.put("type", "bubble");
-                        bubble.put("header", header);
-                        bubble.put("body", body);
-                        bubble.put("footer", footer);
-
-                        // -------------------------------------------------
-                        // 5. FlexMessageへ変換
+                        // 4. FlexMessageへ変換
                         // -------------------------------------------------
                         Map<String, Object> flexMessageMap = new HashMap<>();
                         flexMessageMap.put("type", "flex");
                         flexMessageMap.put("altText", "正解！");
                         flexMessageMap.put("contents", bubble);
 
-                        // ここで魔法を使います。MapをFlexMessageクラスに自動変換します。
                         return objectMapper.convertValue(flexMessageMap, FlexMessage.class);
 
                 } catch (Exception e) {
@@ -105,7 +116,7 @@ public class FlexMessageHelper {
         }
 
         // 出題用のカード
-        public static Message createQuestionMessage(String questionText, Integer imageId) {
+        public static Message createQuestionMessage(String questionText, String imageUuid) {
                 try {
                         Map<String, Object> bubble = new HashMap<>();
                         bubble.put("type", "bubble");
@@ -113,10 +124,11 @@ public class FlexMessageHelper {
                         // -------------------------------------------------
                         // 画像ブロック (Hero)
                         // -------------------------------------------------
-                        if (imageId != null) {
+                        if (imageUuid != null) {
                                 Map<String, Object> hero = new HashMap<>();
                                 hero.put("type", "image");
-                                hero.put("url", APP_URL + "/public/image/" + imageId);
+                                // ★修正: UUIDを使った公開用URL
+                                hero.put("url", APP_URL + "/public/image/" + imageUuid);
                                 hero.put("size", "full");
                                 hero.put("aspectRatio", "16:9");
                                 hero.put("aspectMode", "cover");

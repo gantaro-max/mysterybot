@@ -4,8 +4,12 @@
 
 <mapper namespace="com.gantaro.mysterybot.repository.RiddleImageRepository">
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.RiddleImage" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO riddle_images(data,mime_type) VALUES(#{data},#{mimeType})
+        INSERT INTO riddle_images(uuid,data,mime_type) VALUES(#{uuid},#{data},#{mimeType})
     </insert>
+
+    <select id="findByUuid" resultType="com.gantaro.mysterybot.entity.RiddleImage">
+        SELECT * FROM riddle_images WHERE uuid=#{uuid}
+    </select>
 
     <select id="findById" resultType="com.gantaro.mysterybot.entity.RiddleImage">
         SELECT * FROM riddle_images WHERE id=#{id}

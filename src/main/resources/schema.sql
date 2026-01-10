@@ -59,8 +59,10 @@ CREATE TABLE solved_histories (
 -- 5. 画像保存用テーブル
 CREATE TABLE IF NOT EXISTS riddle_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
     data LONGBLOB,             -- 画像データそのもの
     mime_type VARCHAR(50)      -- 画像形式 (image/png 等)
+
 );
 
 -- 6. 「既成問題（カタログ）」用のテーブル

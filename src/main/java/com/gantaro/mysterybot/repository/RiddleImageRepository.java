@@ -11,4 +11,6 @@ public interface RiddleImageRepository {
 
     Optional<RiddleImage> findById(Integer id);
 
+    Optional<RiddleImage> findByUuid(String uuid);
+
 }

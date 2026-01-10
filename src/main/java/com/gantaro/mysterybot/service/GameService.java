@@ -71,7 +71,6 @@ public class GameService {
             return new GameResult(GameResult.Status.FAILURE, "イベントが見つかりません", null, null);
 
         TeamGroup group = findGroup.get();
-        // 門番チェック (前回実装済みと仮定、未実装ならここに追加)
         if (group.getStartedAt() == null) {
             return new GameResult(GameResult.Status.TEXT_ONLY, "⛔ 準備中 ⛔", null, null);
         }
@@ -94,8 +93,9 @@ public class GameService {
         }
         if (player.getCurrentRiddleId() != null) {
             Riddle r = getRiddle(player.getCurrentRiddleId());
-            // ★修正: 画像IDを渡す
-            return new GameResult(GameResult.Status.SUCCESS, r.getQuestion(), null, r.getImageId());
+            // ★修正: getImageUuid() を使う
+            return new GameResult(GameResult.Status.SUCCESS, r.getQuestion(), null,
+                    r.getImageUuid());
         }
         return new GameResult(GameResult.Status.FAILURE, "エラー: 問題が見つかりません", null, null);
     }
@@ -106,8 +106,6 @@ public class GameService {
         Player player = playerRepository.findByLineUserId(lineUserId).orElseThrow(
                 () -> new IllegalArgumentException("まだ参加していません 開始 [イベントID]」を入力し送信してください"));
 
-        // 門番チェック (省略)
-
         if (player.getCurrentStage() == 0) {
             String name = userText.trim();
             playerRepository.updateNameAndStart(player.getId(), name, LocalDateTime.now());
@@ -117,16 +115,16 @@ public class GameService {
                 return new GameResult(GameResult.Status.TEXT_ONLY, "問題がありません", null, null);
 
             playerRepository.updateCurrentRiddleId(player.getId(), firstRiddle.get().getId());
-            // ★修正: 画像IDを渡す
+
+            // ★修正: getImageUuid() を使う
             return new GameResult(GameResult.Status.SUCCESS, firstRiddle.get().getQuestion(), null,
-                    firstRiddle.get().getImageId());
+                    firstRiddle.get().getImageUuid());
         }
 
         Riddle currentRiddle = getRiddle(player.getCurrentRiddleId());
 
-        // ★修正: あいまい一致 (カンマ区切り対応)
         boolean isCorrect = false;
-        String[] answers = currentRiddle.getAnswer().split("[,、]"); // カンマと読点に対応
+        String[] answers = currentRiddle.getAnswer().split("[,、]");
         for (String ans : answers) {
             if (userText.trim().equalsIgnoreCase(ans.trim())) {
                 isCorrect = true;
@@ -149,9 +147,9 @@ public class GameService {
                         "全問クリア！", null);
             } else {
                 playerRepository.updateCurrentRiddleId(player.getId(), nextRiddle.get().getId());
-                // ★修正: 次の問題の画像IDを渡す
+
                 return new GameResult(GameResult.Status.SUCCESS, currentRiddle.getNextMsg(),
-                        nextRiddle.get().getQuestion(), nextRiddle.get().getImageId());
+                        nextRiddle.get().getQuestion(), nextRiddle.get().getImageUuid());
             }
         } else {
             return new GameResult(GameResult.Status.FAILURE, "不正解...", null, null);
