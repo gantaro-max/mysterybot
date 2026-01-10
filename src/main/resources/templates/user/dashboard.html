@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>ダッシュボード</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <h2>ようこそ、<span th:text="${group.groupName}" class="text-primary"></span> 様</h2>
+        <h4>イベントID：［ <span th:text="${group.groupId}" class="text-primary"></span> ］</h4>
+        <a href="/auth/logout" class="btn btn-outline-danger btn-sm">ログアウト</a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>📣 参加方法:</strong><br>
+        参加者にQRコードを読み込んでもらい、友だち追加後に
+        「<strong>開始 <span th:text="${group.groupId}"></span></strong>」と送信するよう案内してください。
+    </div>
+
+    <div class="card mb-4 shadow-sm border-danger">
+        <div class="card-header bg-danger text-white">
+            <i class="bi bi-stopwatch me-2"></i>イベント進行管理
+        </div>
+        <div class="card-body text-center">
+            
+            <div th:if="${group.startedAt == null}">
+                <h4 class="text-secondary">🟠 現在は「準備期間」です</h4>
+                <p class="text-muted">
+                    参加者がLINEで話しかけても「準備中」と返されます。<br>
+                    幹事様のリハーサル（リセット）は可能ですが、本番は始まりません。
+                </p>
+                <hr>
+                <form action="/user/start-event" method="post" onsubmit="return confirm('【確認】\n本当にイベントを開始しますか？\n\nここから24時間のカウントダウンが始まります！');">
+                    <button type="submit" class="btn btn-danger btn-lg px-5">
+                        🚀 イベントを本番開始する
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${group.startedAt != null}">
+                <h3 class="text-success fw-bold">🟢 イベント開催中</h3>
+                <p class="mb-0">開始時刻: <span th:text="${#dates.format(group.startedAt, 'yyyy/MM/dd HH:mm')}"></span></p>
+                <div class="alert alert-success mt-3 py-1">
+                    現在、プレイヤーは自由にゲームに参加できます。
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card mb-5 shadow-sm border-secondary">
+        <div class="card-header bg-dark text-white">
+            <i class="bi bi-qr-code-scan me-2"></i>参加用QRコード
+        </div>
+        <div class="card-body text-center py-4">
+            <p class="mb-3 text-muted">
+                このQRコードは<b>友だち追加用</b>です。<br>
+                （LINE公式のURLを使用しています）
+            </p>
+            
+            <div id="qrcode" class="d-flex justify-content-center mb-4"></div>
+            
+            <div class="alert alert-warning d-inline-block text-start" style="min-width: 300px;">
+                <h6 class="alert-heading fw-bold"><i class="bi bi-info-circle me-1"></i>参加手順</h6>
+                <small class="text-dark">① QRを読み込んで「追加」または「トーク」</small><br>
+                <small class="text-dark">② トーク画面で以下の合言葉を送信👇</small>
+                <hr class="my-2">
+                <div class="text-center bg-white p-2 rounded border border-warning">
+                    <strong class="fs-3 text-dark">開始 <span th:text="${group.groupId}"></span></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center p-5">
+                    <div class="display-1 mb-3">📝</div>
+                    <h3 class="card-title">シナリオ編集</h3>
+                    <p class="card-text text-muted">問題の追加・編集・削除や<br>出題モードの設定を行います。</p>
+                    <a href="/user/riddles" class="btn btn-primary btn-lg mt-3 w-100">編集画面へ</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center p-5">
+                    <div class="display-1 mb-3">🏆</div>
+                    <h3 class="card-title">ランキング</h3>
+                    <p class="card-text text-muted">リアルタイムの順位表を表示します。<br>会場のスクリーン表示に最適です。</p>
+                    <a href="/user/ranking" class="btn btn-success btn-lg mt-3 w-100">ランキングを見る</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script th:inline="javascript">
+        const friendUrl = /*[[${botFriendUrl}]]*/ 'https://line.me/'; 
+        const groupId = /*[[${group.groupId}]]*/ 'demo';       
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: friendUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>

@@ -30,4 +30,6 @@ public interface RiddleRepository {
     // 謎（問題）の削除
     void delete(Integer id);
 
+    void deleteByGroupId(@Param("groupId") String groupId);
+
 }

@@ -1,7 +1,7 @@
 package com.gantaro.mysterybot.controller;
 
+import java.io.IOException;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,8 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import com.gantaro.mysterybot.entity.Player;
-import com.gantaro.mysterybot.entity.Riddle;
+import org.springframework.web.multipart.MultipartFile;
 import com.gantaro.mysterybot.entity.TeamGroup;
 import com.gantaro.mysterybot.service.EventAdminService;
 import jakarta.servlet.http.HttpSession;
@@ -24,132 +23,84 @@ public class AdminController {
     private final EventAdminService eventAdminService;
     private final HttpSession session;
 
-    @Value("${line.bot.friend-url}")
-    private String botFriendUrl;
-
-    // セッションチェック用のヘルパーメソッド
     private String getLoginGroupId() {
         return (String) session.getAttribute("loginGroupId");
     }
 
-    // 1. ダッシュボード表示 (旧indexから変更)
-    @GetMapping("/dashboard")
-    public String dashboard(Model model) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
 
-        TeamGroup group = eventAdminService.getEvent(groupId);
-        model.addAttribute("group", group);
-        // HTML側で使えるように変数を渡す
-        model.addAttribute("botFriendUrl", botFriendUrl);
+    // S1. 統合ダッシュボード表示
+    @GetMapping("/dashboard")
+    public String superDashboard(Model model) {
+        // IDが "admin" でなければログイン画面へ弾く
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+
+        List<TeamGroup> allEvents = eventAdminService.getAllEvents();
+        model.addAttribute("events", allEvents);
         return "admin/dashboard";
     }
 
-    // 2. ランキング画面 (新規)
-    @GetMapping("/ranking")
-    public String ranking(Model model) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
-
-        TeamGroup group = eventAdminService.getEvent(groupId);
-        List<Player> ranking = eventAdminService.getRanking(groupId);
-
-        model.addAttribute("group", group);
-        model.addAttribute("ranking", ranking);
-
-        return "admin/ranking";
-    }
-
-    // 3. 謎（問題）の一覧表示 (シナリオ編集)
-    @GetMapping("/riddles")
-    public String listRiddles(Model model) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
-
-        TeamGroup group = eventAdminService.getEvent(groupId);
-        List<Riddle> riddles = eventAdminService.getRiddles(groupId);
-
-        model.addAttribute("group", group);
-        model.addAttribute("riddles", riddles);
-        model.addAttribute("groupId", groupId);
-
-        return "admin/riddles";
-    }
-
-    // 4. 謎（問題）の登録処理
-    @PostMapping("/riddles/add")
-    public String addRiddle(@RequestParam String question, @RequestParam String answer,
-            @RequestParam String nextMsg) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
-
-        eventAdminService.registerRiddle(groupId, question, answer, nextMsg);
-        return "redirect:/admin/riddles";
-    }
-
-    // 5. 編集画面を表示
-    @GetMapping("/riddles/edit/{id}")
-    public String editRiddle(@PathVariable Integer id, Model model) {
-        if (getLoginGroupId() == null)
-            return "redirect:/admin/login";
-
-        Riddle riddle = eventAdminService.getRiddle(id);
-        model.addAttribute("riddle", riddle);
-        return "admin/riddle_edit";
-    }
-
-    // 6. 更新処理
-    @PostMapping("/riddles/update")
-    public String updateRiddle(@RequestParam Integer id, @RequestParam String question,
-            @RequestParam String answer, @RequestParam String nextMsg) {
-        if (getLoginGroupId() == null)
-            return "redirect:/admin/login";
-
-        eventAdminService.updateRiddle(id, question, answer, nextMsg);
-        return "redirect:/admin/riddles";
-    }
-
-    // 7. 削除処理
-    @PostMapping("/riddles/delete/{id}")
-    public String deleteRiddle(@PathVariable Integer id) {
-        if (getLoginGroupId() == null)
-            return "redirect:/admin/login";
-
-        eventAdminService.deleteRiddle(id);
-        return "redirect:/admin/riddles";
-    }
-
-    // 8. 設定を保存するPOST処理
-    @PostMapping("/riddles/settings")
-    public String updateSettings(@RequestParam(required = false) Boolean isRandom) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
-
-        eventAdminService.updateEventSettings(groupId, isRandom != null);
-        return "redirect:/admin/riddles";
-    }
-
-    // 9. イベント開始処理 (スイッチON)
-    @PostMapping("/start-event")
-    public String startEvent(Model model) { // 引数を整理しました
-        String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/admin/login";
-
-        // すでに開始していないかチェック
-        TeamGroup group = eventAdminService.getEvent(groupId);
-        if (group.getStartedAt() != null) {
-            return "redirect:/admin/dashboard"; // 開始済みなら無視
+    // S2. ゴッドログイン（パスワードなしで該当イベントの管理画面へ侵入）
+    @PostMapping("/impersonate/{groupId}")
+    public String impersonate(@PathVariable String groupId) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
         }
 
-        // 開始！
-        eventAdminService.startEvent(groupId);
+        // セッションを該当グループIDで上書き（＝なりすましログイン完了）
+        session.setAttribute("loginGroupId", groupId);
 
+        return "redirect:/user/dashboard";
+    }
+
+    // S3. イベント強制削除
+    @PostMapping("/delete/{groupId}")
+    public String forceDeleteEvent(@PathVariable String groupId) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+
+        // 自身のID(admin)は消さないようにガード
+        if ("admin".equals(groupId)) {
+            return "redirect:/admin/dashboard?error=admin_cannot_delete";
+        }
+
+        eventAdminService.deleteEvent(groupId);
         return "redirect:/admin/dashboard";
+    }
+
+    // ▼▼▼ カタログ管理機能 (スーパーAdmin用) ▼▼▼
+
+    // S4. カタログ一覧・編集画面表示
+    @GetMapping("/catalog")
+    public String catalog(Model model) {
+        if (!"admin".equals(getLoginGroupId()))
+            return "redirect:/auth/login";
+
+        model.addAttribute("catalog", eventAdminService.getCatalog());
+        // 管理者権限ON（これで追加フォームが表示されます）
+        model.addAttribute("isSuperAdmin", true);
+        // 「戻る」ボタンのリンク先
+        model.addAttribute("backLink", "/admin/dashboard");
+
+        // テンプレートはUser用のものを共用します
+        return "user/catalog";
+    }
+
+    // S5. マスターデータ登録
+    @PostMapping("/catalog/add-master")
+    public String addMasterRiddle(@RequestParam String question, @RequestParam String answer,
+            @RequestParam String nextMsg, @RequestParam String hintMsg,
+            @RequestParam String category, @RequestParam(required = false) MultipartFile imageFile)
+            throws IOException {
+
+        if (!"admin".equals(getLoginGroupId()))
+            return "redirect:/auth/login";
+
+        Integer imgId = eventAdminService.uploadImage(imageFile);
+        eventAdminService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId, category);
+
+        return "redirect:/admin/catalog";
     }
 }
