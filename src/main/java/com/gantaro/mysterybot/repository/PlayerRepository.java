@@ -9,33 +9,34 @@ import com.gantaro.mysterybot.entity.Player;
 
 @Mapper
 public interface PlayerRepository {
-    // LINE ID と グループID でプレイヤーを探す
-    Optional<Player> findByLineUserAndGroup(@Param("lineUserId") String lineUserId,
-            @Param("groupId") String groupId);
+        // LINE ID と グループID でプレイヤーを探す
+        Optional<Player> findByLineUserAndGroup(@Param("lineUserId") String lineUserId,
+                        @Param("groupId") String groupId);
 
-    // 新規プレイヤー登録
-    void insert(Player player);
+        // 新規プレイヤー登録
+        void insert(Player player);
 
-    // ステージを進める（進捗更新）
-    void updateProgress(@Param("id") Integer id, @Param("currentStage") Integer currentStage);
+        // ステージを進める（進捗更新）
+        void updateProgress(@Param("id") Integer id, @Param("currentStage") Integer currentStage);
 
-    Optional<Player> findByLineUserId(String lineUserId);
+        Optional<Player> findByLineUserId(String lineUserId);
 
-    void savePlayer(Player player);
+        void savePlayer(Player player);
 
-    void updateNameAndStart(@Param("id") Integer id, @Param("playerName") String playerName,
-            @Param("startAt") LocalDateTime startAt);
+        void updateNameAndStart(@Param("id") Integer id, @Param("playerName") String playerName,
+                        @Param("startAt") LocalDateTime startAt);
 
-    void updateCurrentRiddleId(@Param("id") Integer id,
-            @Param("nextRiddleId") Integer nextRiddleId);
+        void updateCurrentRiddleId(@Param("id") Integer id,
+                        @Param("nextRiddleId") Integer nextRiddleId);
 
-    void updateFinishedAt(@Param("id") Integer id, @Param("finishedAt") LocalDateTime finishedAt);
+        void updateFinishedAt(@Param("id") Integer id,
+                        @Param("finishedAt") LocalDateTime finishedAt);
 
-    List<Player> findRankingByGroup(@Param("groupId") String groupId);
+        List<Player> findRankingByGroup(@Param("groupId") String groupId);
 
-    // プレイヤー削除
-    void deleteById(Integer id);
+        // プレイヤー削除
+        void deleteById(@Param("id") Integer id);
 
-
+        void deleteByGroupId(@Param("groupId") String groupId);
 
 }

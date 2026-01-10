@@ -202,4 +202,24 @@ public class EventAdminService {
         mr.setCategory(cat);
         masterRiddleRepository.insert(mr);
     }
+
+    // ▼▼▼ スーパーAdmin用機能 ▼▼▼
+
+    // 全イベントリスト取得
+    public List<TeamGroup> getAllEvents() {
+        return teamGroupRepository.findAll();
+    }
+
+    // イベントの強制削除（プレイヤー、謎、グループ本体をまとめて消す）
+    @Transactional
+    public void deleteEvent(String groupId) {
+        // 1. プレイヤーを削除（履歴は外部キー制約で自動削除される想定、または履歴も消す必要あり）
+        playerRepository.deleteByGroupId(groupId);
+
+        // 2. 謎（シナリオ）を削除
+        riddleRepository.deleteByGroupId(groupId);
+
+        // 3. グループ本体を削除
+        teamGroupRepository.delete(groupId);
+    }
 }
