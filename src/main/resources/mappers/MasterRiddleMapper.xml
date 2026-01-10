@@ -5,11 +5,17 @@
 <mapper namespace="com.gantaro.mysterybot.repository.MasterRiddleRepository">
     
     <select id="findById" resultType="com.gantaro.mysterybot.entity.MasterRiddle">
-        SELECT * FROM master_riddles WHERE id=#{id}
+        SELECT m.*, i.uuid AS image_uuid
+        FROM master_riddles m
+        LEFT JOIN riddle_images i ON m.image_id = i.id
+        WHERE m.id=#{id}
     </select>
 
     <select id="findAll" resultType="com.gantaro.mysterybot.entity.MasterRiddle">
-        SELECT * FROM master_riddles ORDER BY id
+        SELECT m.*, i.uuid AS image_uuid
+        FROM master_riddles m
+        LEFT JOIN riddle_images i ON m.image_id = i.id
+        ORDER BY m.id
     </select>
 
     <insert id="insert" parameterType="com.gantaro.mysterybot.entity.MasterRiddle">

@@ -24,7 +24,7 @@
                     <label class="form-label fw-bold">画像</label>
                     
                     <div th:if="${riddle.imageId}" class="mb-2">
-                        <img th:src="@{/public/image/{id}(id=${riddle.imageId})}" 
+                        <img th:src="@{/public/image/{uuid}(uuid=${riddle.imageUuid})}"
                              class="img-thumbnail" style="max-height: 150px;">
                         <span class="text-muted ms-2 small">現在の画像</span>
                     </div>

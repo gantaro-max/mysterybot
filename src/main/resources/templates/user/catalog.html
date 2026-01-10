@@ -52,7 +52,7 @@
         <div class="col-md-4 mb-4" th:each="item : ${catalog}">
             <div class="card h-100 shadow-sm">
                 <div th:if="${item.imageId}" style="height: 150px; overflow: hidden;">
-                    <img th:src="@{/public/image/{id}(id=${item.imageId})}" class="card-img-top" style="object-fit: cover; height: 100%; width: 100%;">
+                    <img th:src="@{/public/image/{uuid}(uuid=${item.imageUuid})}" class="card-img-top" style="object-fit: cover; height: 100%; width: 100%;">
                 </div>
                 
                 <div class="card-body">
