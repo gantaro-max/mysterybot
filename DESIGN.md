@@ -37,7 +37,8 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 
 ### 2.3 非機能要件
 * **レスポンス:** LINE返信の即応性。
-* **セキュリティ:** * 管理画面: セッションベースのログイン認証。権限によるURLアクセス制御。
+* **セキュリティ:**
+    * 管理画面: セッションベースのログイン認証。権限によるURLアクセス制御。
     * 画像アクセス: 推測不可能なUUIDを使用した公開URL (`/public/image/{uuid}`) を採用し、連番IDによる不正閲覧（ネタバレ）を防止する。
 
 ---
@@ -45,7 +46,7 @@ Webブラウザ上で動作する管理画面を提供し、SQLを操作せず�
 ## 3. 基本設計 (Basic Design)
 
 ### 3.1 アーキテクチャ
-* **Backend:** Java 21, Spring Boot 3.x
+* **Backend:** Java 21, Spring Boot
 * **Frontend:** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
 * **Database:** MySQL 8.0 (Docker / TiDB Serverless)
 * **ORM:** MyBatis
@@ -166,3 +167,100 @@ URLプレフィックスにより役割を明確に分離する。
 
 ### Util
 * **`FlexMessageHelper`**: LINE Flex Message JSONへの変換（UUIDベースのURL生成を含む）。
+
+---
+
+## 7. システム構成図 (Diagrams)
+
+### 7.1 エンティティ関係図 (ER Diagram Class View)
+データベースのテーブルと対応するエンティティの関係。
+
+```mermaid
+classDiagram
+    %% イベント管理
+    class TeamGroup {
+        +String groupId [PK]
+        +String groupName
+        +String adminPass
+        +Boolean isRandomOrder
+    }
+
+    %% 参加者
+    class Player {
+        +Integer id [PK]
+        +String lineUserId
+        +String groupId [FK]
+        +Integer currentStage
+    }
+
+    %% 謎データ
+    class Riddle {
+        +Integer id [PK]
+        +String groupId [FK]
+        +Integer stageNo
+        +String question
+        +String answer
+        +Integer imageId [FK]
+    }
+
+    %% 画像データ
+    class RiddleImage {
+        +Integer id [PK]
+        +String uuid [Unique]
+        +byte[] data
+    }
+
+    %% 履歴
+    class SolvedHistory {
+        +Integer id
+        +Integer playerId [FK]
+        +Integer riddleId [FK]
+    }
+
+    TeamGroup "1" -- "*" Player : has
+    TeamGroup "1" -- "*" Riddle : manages
+    Player "1" -- "*" SolvedHistory : records
+    Riddle "1" -- "0..1" RiddleImage : uses
+```
+
+### 7.2 アプリケーション構造 (Controller & Service)
+
+```mermaid
+graph TD
+    User((ユーザー/ブラウザ))
+    BotUser((LINE Bot User))
+
+    subgraph Controllers
+        AC[AdminController]
+        UC[UserController]
+        AuC[AuthController]
+        LWC[LineWebhookController]
+        IC[ImageController]
+    end
+
+    subgraph Services
+        EAS[EventAdminService]
+        GS[GameService]
+    end
+
+    subgraph Repositories
+        DB[(Database)]
+    end
+
+    User --> AuC
+    User --> AC
+    User --> UC
+    User --> IC
+    BotUser --> LWC
+    BotUser --> IC
+
+    AuC --> EAS
+    AC --> EAS
+    UC --> EAS
+    LWC --> GS
+    
+    IC --> DB
+
+    EAS --> DB
+    GS --> DB
+```
