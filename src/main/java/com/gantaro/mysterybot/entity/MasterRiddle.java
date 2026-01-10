@@ -12,5 +12,6 @@ public class MasterRiddle {
     private String nextMsg;
     private Integer imageId;
     private String category;
+    private String imageUuid;
 
 }
