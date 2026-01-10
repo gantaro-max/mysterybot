@@ -14,7 +14,7 @@
         <div class="card-body p-4">
             <h3 class="text-center mb-4">🧩 謎解きBot 管理画面</h3>
             
-            <form action="/admin/login" method="post">
+            <form action="/auth/login" method="post">
                 <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
                 
                 <div class="mb-3">
@@ -29,7 +29,7 @@
             </form>
             
             <div class="text-center mt-3">
-                <a href="/admin/register" class="text-decoration-none">新規イベント作成はこちら</a>
+                <a href="/auth/register" class="text-decoration-none">新規イベント作成はこちら</a>
             </div>
         </div>
     </div>

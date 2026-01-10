@@ -23,6 +23,8 @@ CREATE TABLE riddles (
     question TEXT NOT NULL,
     answer VARCHAR(255) NOT NULL,
     next_msg TEXT,                    -- 正解時のメッセージ
+    image_id INT DEFAULT NULL,
+    hint_msg VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (group_id) REFERENCES team_groups(group_id)
 );
 
@@ -52,6 +54,26 @@ CREATE TABLE solved_histories (
     solved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, -- プレイヤーが消えたら履歴も消す
     FOREIGN KEY (riddle_id) REFERENCES riddles(id)
+);
+
+-- 5. 画像保存用テーブル
+CREATE TABLE IF NOT EXISTS riddle_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    data LONGBLOB,             -- 画像データそのもの
+    mime_type VARCHAR(50)      -- 画像形式 (image/png 等)
+
+);
+
+-- 6. 「既成問題（カタログ）」用のテーブル
+CREATE TABLE IF NOT EXISTS master_riddles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer VARCHAR(255) NOT NULL,
+    hint_msg VARCHAR(255),
+    next_msg TEXT NOT NULL,
+    image_id INT,              -- 画像は共有して使う
+    category VARCHAR(50) DEFAULT '一般' -- ジャンル分け用（例: 初級, 難問, 結婚式）
 );
 
 -- ==========================================

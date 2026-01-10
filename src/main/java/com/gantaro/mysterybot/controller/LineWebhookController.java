@@ -34,6 +34,11 @@ public class LineWebhookController {
         log.info("受信メッセージ: userId={}, text={}", userId, text);
 
         try {
+
+            // ヒント機能
+            if (text.equals("ヒント") || text.equalsIgnoreCase("hint")) {
+                return new TextMessage(gameService.getHint(userId));
+            }
             // ▼▼▼ 1. リセット機能 ▼▼▼
             // リッチメニューの「リセット」ボタンや、手入力に対応
             if (text.equals("リセット") || text.equalsIgnoreCase("reset")) {
@@ -74,8 +79,9 @@ public class LineWebhookController {
                     GameResult result = gameService.joinGame(userId, parts[1]);
 
                     if (result.getStatus() == GameResult.Status.SUCCESS) {
-                        // ヘルパーを呼ぶ
-                        return FlexMessageHelper.createQuestionMessage(result.getMainText());
+                        // ★修正: IDではなくUUIDを渡す
+                        return FlexMessageHelper.createQuestionMessage(result.getMainText(),
+                                result.getImageUuid());
                     } else {
                         return new TextMessage(result.getMainText());
                     }
@@ -91,14 +97,15 @@ public class LineWebhookController {
             if (result.getStatus() == GameResult.Status.SUCCESS) {
                 // subText(次の問題)がある ＝ 「謎解き正解」のとき → 緑のカード
                 if (result.getSubText() != null) {
-                    return FlexMessageHelper.createCorrectMessage(result.getMainText(), // ストーリー
-                            result.getSubText() // 次の問題
-                    );
+                    // ★修正: IDではなくUUIDを渡す
+                    return FlexMessageHelper.createCorrectMessage(result.getMainText(),
+                            result.getSubText(), result.getImageUuid());
                 }
                 // subTextがない ＝ 「名前登録完了」のとき → 青のカード
                 else {
-
-                    return FlexMessageHelper.createQuestionMessage(result.getMainText());
+                    // ★修正: IDではなくUUIDを渡す
+                    return FlexMessageHelper.createQuestionMessage(result.getMainText(),
+                            result.getImageUuid());
                 }
 
             } else {
