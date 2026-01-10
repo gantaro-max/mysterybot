@@ -32,4 +32,8 @@
         DELETE FROM riddles WHERE id = #{id}
     </delete>
 
+    <delete id="deleteByGroupId">
+        DELETE FROM riddles WHERE group_id = #{groupId}
+    </delete>
+
 </mapper>

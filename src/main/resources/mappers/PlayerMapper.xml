@@ -68,4 +68,8 @@
         DELETE FROM players WHERE id = #{id}
     </delete>
 
+    <delete id="deleteByGroupId">
+        DELETE FROM players WHERE group_id = #{groupId}
+    </delete>
+
 </mapper>

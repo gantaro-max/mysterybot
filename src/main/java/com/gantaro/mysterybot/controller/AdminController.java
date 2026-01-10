@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import com.gantaro.mysterybot.entity.MasterRiddle;
 import com.gantaro.mysterybot.entity.Player;
 import com.gantaro.mysterybot.entity.Riddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
@@ -163,49 +162,47 @@ public class AdminController {
         return "redirect:/admin/dashboard";
     }
 
-    // ▼▼▼ 以下、新機能（カタログ）用 ▼▼▼
+    // ▼▼▼ スーパーAdmin（統合管理）機能 ▼▼▼
 
-    // 10. カタログ画面表示 (★新規)
-    @GetMapping("/catalog")
-    public String catalog(Model model) {
-        String groupId = getLoginGroupId();
-        if (groupId == null)
+    // S1. 統合ダッシュボード表示
+    @GetMapping("/super/dashboard")
+    public String superDashboard(Model model) {
+        // IDが "admin" でなければログイン画面へ弾く
+        if (!"admin".equals(getLoginGroupId())) {
             return "redirect:/admin/login";
-
-        List<MasterRiddle> catalog = eventAdminService.getCatalog();
-        model.addAttribute("catalog", catalog);
-
-        // IDが "admin" の場合のみスーパー管理者権限を与える
-        boolean isSuperAdmin = "admin".equals(groupId);
-        model.addAttribute("isSuperAdmin", isSuperAdmin);
-
-        return "admin/catalog";
-    }
-
-    // 11. カタログからインポート (★新規)
-    @PostMapping("/catalog/import")
-    public String importRiddle(@RequestParam Integer id) {
-        String groupId = getLoginGroupId();
-        if (groupId != null) {
-            eventAdminService.importFromCatalog(groupId, id);
         }
-        return "redirect:/admin/riddles";
+
+        List<TeamGroup> allEvents = eventAdminService.getAllEvents();
+        model.addAttribute("events", allEvents);
+        return "admin/super_dashboard";
     }
 
-    // 12. マスターデータ登録 (★新規: 管理者のみ)
-    @PostMapping("/catalog/add-master")
-    public String addMasterRiddle(@RequestParam String question, @RequestParam String answer,
-            @RequestParam String nextMsg, @RequestParam String hintMsg,
-            @RequestParam String category, @RequestParam(required = false) MultipartFile imageFile)
-            throws IOException {
+    // S2. ゴッドログイン（パスワードなしで該当イベントの管理画面へ侵入）
+    @PostMapping("/super/login/{groupId}")
+    public String godLogin(@PathVariable String groupId) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/admin/login";
+        }
 
-        // スーパーAdminチェック
-        if (!"admin".equals(getLoginGroupId()))
-            return "redirect:/admin/dashboard";
+        // セッションを該当グループIDで上書き（＝なりすましログイン完了）
+        session.setAttribute("loginGroupId", groupId);
 
-        Integer imgId = eventAdminService.uploadImage(imageFile);
-        eventAdminService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId, category);
+        return "redirect:/admin/dashboard";
+    }
 
-        return "redirect:/admin/catalog";
+    // S3. イベント強制削除
+    @PostMapping("/super/delete/{groupId}")
+    public String forceDeleteEvent(@PathVariable String groupId) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/admin/login";
+        }
+
+        // 自身のID(admin)は消さないようにガード
+        if ("admin".equals(groupId)) {
+            return "redirect:/admin/super/dashboard?error=admin_cannot_delete";
+        }
+
+        eventAdminService.deleteEvent(groupId);
+        return "redirect:/admin/super/dashboard";
     }
 }
