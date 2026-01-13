@@ -224,4 +224,11 @@ public class EventAdminService {
         // 3. グループ本体を削除
         teamGroupRepository.delete(groupId);
     }
+
+    // 開始時間をリセットして「準備中」に戻す
+    @Transactional
+    public void resetEventTime(String groupId) {
+        // nullを渡すことで、DBの started_at を NULL に戻します
+        teamGroupRepository.updateStartedAt(groupId, null);
+    }
 }
