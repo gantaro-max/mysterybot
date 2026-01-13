@@ -103,4 +103,18 @@ public class AdminController {
 
         return "redirect:/admin/catalog";
     }
+
+    // S6. イベント時間をリセット（準備中に戻す）
+    @PostMapping("/reset-time/{groupId}")
+    public String resetEventTime(@PathVariable String groupId) {
+        // 管理者権限チェック
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+
+        eventAdminService.resetEventTime(groupId);
+        return "redirect:/admin/dashboard";
+    }
+
+
 }
