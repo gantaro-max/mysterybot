@@ -66,6 +66,15 @@
                                         </button>
                                     </form>
 
+                                    <form th:if="${event.startedAt != null}"
+                                          th:action="@{/admin/reset-time/{id}(id=${event.groupId})}" 
+                                          method="post"
+                                          onsubmit="return confirm('【確認】\nこのイベントを「準備中」に戻しますか？\n24時間のカウントダウンがリセットされます。');">
+                                        <button type="submit" class="btn btn-warning btn-sm text-white" title="準備中に戻す">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
+
                                     <form th:if="${event.groupId != 'admin'}" 
                                           th:action="@{/admin/delete/{id}(id=${event.groupId})}" 
                                           method="post" 
