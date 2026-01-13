@@ -19,6 +19,7 @@ import com.gantaro.mysterybot.repository.MasterRiddleRepository;
 import com.gantaro.mysterybot.repository.PlayerRepository;
 import com.gantaro.mysterybot.repository.RiddleImageRepository;
 import com.gantaro.mysterybot.repository.RiddleRepository;
+import com.gantaro.mysterybot.repository.SolvedHistoryRepository;
 import com.gantaro.mysterybot.repository.TeamGroupRepository;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
@@ -32,6 +33,7 @@ public class EventAdminService {
     private final PlayerRepository playerRepository;
     private final MasterRiddleRepository masterRiddleRepository;
     private final RiddleImageRepository riddleImageRepository;
+    private final SolvedHistoryRepository solvedHistoryRepository;
 
     // ▼▼▼ ログイン・イベント作成 ▼▼▼
     public boolean login(String groupId, String password) {
@@ -110,8 +112,13 @@ public class EventAdminService {
         riddleRepository.update(resultRiddle);
     }
 
+    // 謎の削除
     @Transactional
     public void deleteRiddle(Integer id) {
+        // 1. まず、この問題に関連する「回答履歴」を削除する
+        solvedHistoryRepository.deleteByRiddleId(id);
+
+        // 2. その後、問題本体を削除する
         riddleRepository.delete(id);
     }
 

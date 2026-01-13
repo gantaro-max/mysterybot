@@ -14,4 +14,7 @@ public interface SolvedHistoryRepository {
 
     // Playerのクリア履歴を全削除
     void deleteByPlayerId(Integer playerId);
+
+    // 問題IDに紐づく履歴を削除
+    void deleteByRiddleId(Integer riddleId);
 }
