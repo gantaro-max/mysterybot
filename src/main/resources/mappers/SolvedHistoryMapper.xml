@@ -13,4 +13,8 @@
     <delete id="deleteByPlayerId">
         DELETE FROM solved_histories WHERE player_id = #{playerId}
     </delete>
+
+    <delete id="deleteByRiddleId">
+        DELETE FROM solved_histories WHERE riddle_id = #{riddleId}
+    </delete>
 </mapper>
