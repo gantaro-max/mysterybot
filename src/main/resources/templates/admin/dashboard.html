@@ -60,14 +60,14 @@
                             <td class="text-end pe-4">
                                 <div class="d-flex justify-content-end gap-2">
                                     
-                                    <form th:action="@{/admin/super/login/{id}(id=${event.groupId})}" method="post">
+                                    <form th:action="@{/admin/impersonate/{id}(id=${event.groupId})}" method="post">
                                         <button type="submit" class="btn btn-primary btn-sm" title="管理画面へ侵入">
                                             <i class="bi bi-box-arrow-in-right me-1"></i>管理へ
                                         </button>
                                     </form>
 
                                     <form th:if="${event.groupId != 'admin'}" 
-                                          th:action="@{/admin/super/delete/{id}(id=${event.groupId})}" 
+                                          th:action="@{/admin/delete/{id}(id=${event.groupId})}" 
                                           method="post" 
                                           onsubmit="return confirm('【警告】\n本当に削除しますか？\nこのイベントに関する全てのデータ（プレイヤー、履歴、問題）が消滅します。');">
                                         <button type="submit" class="btn btn-outline-danger btn-sm" title="完全削除">
