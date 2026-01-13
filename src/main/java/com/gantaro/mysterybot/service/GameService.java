@@ -24,6 +24,16 @@ public class GameService {
     private final PlayerRepository playerRepository;
     private final TeamGroupRepository teamGroupRepository;
     private final SolvedHistoryRepository solvedHistoryRepository;
+    // 制限時間（24時間）を定数定義
+    private static final long TIME_LIMIT_MS = 24L * 60 * 60 * 1000;
+
+    // イベントが終了しているか判定するメソッド
+    private boolean isEventExpired(TeamGroup group) {
+        if (group.getStartedAt() == null)
+            return false;
+        long elapsed = System.currentTimeMillis() - group.getStartedAt().getTime();
+        return elapsed > TIME_LIMIT_MS;
+    }
 
     // ヘルパーメソッド: IDからRiddleを取得
     private Riddle getRiddle(Integer id) {
@@ -75,6 +85,11 @@ public class GameService {
             return new GameResult(GameResult.Status.TEXT_ONLY, "⛔ 準備中 ⛔", null, null);
         }
 
+        if (isEventExpired(group)) {
+            return new GameResult(GameResult.Status.TEXT_ONLY,
+                    "⛔ イベント終了 ⛔\n開催期間（24時間）が終了しました。\nご参加ありがとうございました！", null, null);
+        }
+
         Player player = playerRepository.findByLineUserAndGroup(lineUserId, groupId).orElse(null);
         if (player == null) {
             player = new Player();
@@ -105,6 +120,12 @@ public class GameService {
     public GameResult processAnswer(String lineUserId, String userText) {
         Player player = playerRepository.findByLineUserId(lineUserId).orElseThrow(
                 () -> new IllegalArgumentException("まだ参加していません 開始 [イベントID]」を入力し送信してください"));
+
+        TeamGroup group = teamGroupRepository.findByGroupId(player.getGroupId()).orElseThrow();
+        if (isEventExpired(group)) {
+            return new GameResult(GameResult.Status.TEXT_ONLY,
+                    "⛔ イベント終了 ⛔\n開催期間（24時間）が終了しました。\n回答の受付は締め切られました。", null, null);
+        }
 
         if (player.getCurrentStage() == 0) {
             String name = userText.trim();

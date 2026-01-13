@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    <div class="table-container bg-white">
+    <div class="table-container bg-white d-none d-md-block">
         <table class="table table-hover mb-0 align-middle">
             <thead class="sticky-header">
                 <tr>
@@ -130,6 +130,45 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+
+   <div class="d-md-none">
+        <div th:each="riddle : ${riddles}" class="card mb-3 shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary rounded-pill">No.<span th:text="${riddle.stageNo}"></span></span>
+                    
+                    <div class="btn-group btn-group-sm">
+                        <a th:href="@{/user/riddles/edit/{id}(id=${riddle.id})}" class="btn btn-outline-success">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form th:action="@{/user/riddles/delete/{id}(id=${riddle.id})}" method="POST" style="display: inline;" onsubmit="return confirm('本当に削除しますか？');">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <h5 class="card-title fw-bold text-dark" th:text="${riddle.question}"></h5>
+                
+                <div class="mb-2">
+                    <small class="text-muted d-block">正解:</small>
+                    <span class="badge bg-light text-dark border fs-6" th:text="${riddle.answer}"></span>
+                </div>
+                
+                <div>
+                    <small class="text-muted d-block">クリア後メッセージ:</small>
+                    <small class="text-secondary" th:text="${riddle.nextMsg}"></small>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(riddles)}" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            まだ問題が登録されていません。<br>
+            右上の「新しい問題を追加」ボタンから登録してください。
+        </div>
     </div>
 
     <div class="modal fade" id="addRiddleModal" tabindex="-1" aria-hidden="true">
