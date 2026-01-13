@@ -3,22 +3,25 @@ package com.gantaro.mysterybot.util;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.bot.jackson.ModelObjectMapper;
 import com.linecorp.bot.messaging.model.FlexMessage;
 import com.linecorp.bot.messaging.model.Message;
 
+@Component
 public class FlexMessageHelper {
 
-        // ⚠️重要: ご自身のRenderアプリのURLに書き換えてください
-        private static final String APP_URL = "https://mysterybot.onrender.com";
+        @Value("${mysterybot.app-url}")
+        private String appUrl;
 
         // LINE SDKに含まれる「MapからFlexMessageクラスへ変換するツール」
         private static final ObjectMapper objectMapper = ModelObjectMapper.createNewObjectMapper();
 
         // 正解返信用のカード
         // ★修正: 第3引数を Integer から String (UUID) に変更
-        public static Message createCorrectMessage(String storyText, String nextQuestionText,
+        public Message createCorrectMessage(String storyText, String nextQuestionText,
                         String nextImageUuid) {
                 try {
                         Map<String, Object> bubble = new HashMap<>();
@@ -32,7 +35,7 @@ public class FlexMessageHelper {
                                 Map<String, Object> hero = new HashMap<>();
                                 hero.put("type", "image");
                                 // ★修正: UUIDを使った公開用URL
-                                hero.put("url", APP_URL + "/public/image/" + nextImageUuid);
+                                hero.put("url", appUrl + "/public/image/" + nextImageUuid);
                                 hero.put("size", "full");
                                 hero.put("aspectRatio", "16:9");
                                 hero.put("aspectMode", "cover");
@@ -116,7 +119,7 @@ public class FlexMessageHelper {
         }
 
         // 出題用のカード
-        public static Message createQuestionMessage(String questionText, String imageUuid) {
+        public Message createQuestionMessage(String questionText, String imageUuid) {
                 try {
                         Map<String, Object> bubble = new HashMap<>();
                         bubble.put("type", "bubble");
@@ -128,7 +131,7 @@ public class FlexMessageHelper {
                                 Map<String, Object> hero = new HashMap<>();
                                 hero.put("type", "image");
                                 // ★修正: UUIDを使った公開用URL
-                                hero.put("url", APP_URL + "/public/image/" + imageUuid);
+                                hero.put("url", appUrl + "/public/image/" + imageUuid);
                                 hero.put("size", "full");
                                 hero.put("aspectRatio", "16:9");
                                 hero.put("aspectMode", "cover");
