@@ -20,7 +20,7 @@ public class FlexMessageHelper {
         private static final ObjectMapper objectMapper = ModelObjectMapper.createNewObjectMapper();
 
         // 正解返信用のカード
-        // ★修正: 第3引数を Integer から String (UUID) に変更
+        // 第3引数を Integer から String (UUID) に変更
         public Message createCorrectMessage(String storyText, String nextQuestionText,
                         String nextImageUuid) {
                 try {
@@ -58,7 +58,7 @@ public class FlexMessageHelper {
                         titleText.put("align", "center");
 
                         header.put("contents", List.of(titleText));
-                        bubble.put("header", header); // ★修正: 作成したheaderをbubbleに追加
+                        bubble.put("header", header); // 作成したheaderをbubbleに追加
 
                         // -------------------------------------------------
                         // 2. 本文 (ストーリー)
@@ -100,7 +100,7 @@ public class FlexMessageHelper {
                         nextQText.put("align", "center");
 
                         footer.put("contents", List.of(labelText, nextQText));
-                        bubble.put("footer", footer); // ★修正: 作成したfooterをbubbleに追加
+                        bubble.put("footer", footer); // 作成したfooterをbubbleに追加
 
                         // -------------------------------------------------
                         // 4. FlexMessageへ変換
