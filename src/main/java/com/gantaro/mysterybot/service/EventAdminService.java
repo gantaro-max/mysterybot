@@ -238,4 +238,38 @@ public class EventAdminService {
         // nullを渡すことで、DBの started_at を NULL に戻します
         teamGroupRepository.updateStartedAt(groupId, null);
     }
+
+    // ▼▼▼カタログ問題の削除 ▼▼▼
+    @Transactional
+    public void deleteMasterRiddle(Integer id) {
+        masterRiddleRepository.delete(id);
+    }
+
+    // 1件取得（編集画面用）
+    public MasterRiddle getMasterRiddle(Integer id) {
+        return masterRiddleRepository.findById(id);
+    }
+
+    // 更新処理
+    @Transactional
+    public void updateMasterRiddle(Integer id, String question, String answer, String nextMsg,
+            String hintMsg, Integer imageId, String category) {
+
+        MasterRiddle mr = masterRiddleRepository.findById(id);
+        if (mr == null)
+            return;
+
+        mr.setQuestion(question);
+        mr.setAnswer(answer);
+        mr.setNextMsg(nextMsg);
+        mr.setHintMsg(hintMsg);
+        mr.setCategory(category);
+
+        // 画像が新しくアップロードされた場合のみIDを更新
+        if (imageId != null) {
+            mr.setImageId(imageId);
+        }
+
+        masterRiddleRepository.update(mr);
+    }
 }

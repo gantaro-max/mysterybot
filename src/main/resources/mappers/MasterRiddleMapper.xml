@@ -22,6 +22,17 @@
         INSERT INTO master_riddles(question,answer,hint_msg,next_msg,image_id,category) VALUES(#{question},#{answer},#{hintMsg},#{nextMsg},#{imageId},#{category})
     </insert>
 
+    <update id="update" parameterType="com.gantaro.mysterybot.entity.MasterRiddle">
+        UPDATE master_riddles
+        SET question = #{question},
+            answer = #{answer},
+            hint_msg = #{hintMsg},
+            next_msg = #{nextMsg},
+            category = #{category},
+            image_id = #{imageId}
+        WHERE id = #{id}
+    </update>
+
     <delete id="delete">
         DELETE FROM master_riddles WHERE id=#{id}
     </delete>

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.gantaro.mysterybot.entity.MasterRiddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
 import com.gantaro.mysterybot.service.EventAdminService;
 import jakarta.servlet.http.HttpSession;
@@ -114,6 +115,46 @@ public class AdminController {
 
         eventAdminService.resetEventTime(groupId);
         return "redirect:/admin/dashboard";
+    }
+
+    // S7. カタログ問題の削除
+    @PostMapping("/catalog/delete/{id}")
+    public String deleteMasterRiddle(@PathVariable Integer id) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+        eventAdminService.deleteMasterRiddle(id);
+        return "redirect:/admin/catalog";
+    }
+
+    // ▼▼▼ 編集画面表示 ▼▼▼
+    @GetMapping("/catalog/edit/{id}")
+    public String editMasterRiddlePage(@PathVariable Integer id, Model model) {
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+
+        MasterRiddle riddle = eventAdminService.getMasterRiddle(id);
+        model.addAttribute("riddle", riddle);
+        return "admin/master_riddle_edit";
+    }
+
+    // ▼▼▼ 更新実行 ▼▼▼
+    @PostMapping("/catalog/update")
+    public String updateMasterRiddle(@RequestParam Integer id, @RequestParam String question,
+            @RequestParam String answer, @RequestParam String nextMsg, @RequestParam String hintMsg,
+            @RequestParam String category, @RequestParam(required = false) MultipartFile imageFile)
+            throws IOException {
+
+        if (!"admin".equals(getLoginGroupId())) {
+            return "redirect:/auth/login";
+        }
+
+        Integer imgId = eventAdminService.uploadImage(imageFile);
+        eventAdminService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
+                category);
+
+        return "redirect:/admin/catalog";
     }
 
 

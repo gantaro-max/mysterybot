@@ -46,30 +46,54 @@
                 <button type="submit" class="btn btn-danger">カタログに追加</button>
             </form>
         </div>
-    </div>
+    </div>    
 
     <div class="row">
         <div class="col-md-4 mb-4" th:each="item : ${catalog}">
             <div class="card h-100 shadow-sm">
-                <div th:if="${item.imageId}" style="height: 150px; overflow: hidden;">
+                <div th:if="${item.imageId}" style="height: 150px; overflow: hidden; background-color: #f8f9fa;">
                     <img th:src="@{/public/image/{uuid}(uuid=${item.imageUuid})}" class="card-img-top" style="object-fit: cover; height: 100%; width: 100%;">
+                </div>
+                <div th:unless="${item.imageId}" class="d-flex align-items-center justify-content-center text-muted" style="height: 150px; background-color: #e9ecef;">
+                    <i class="bi bi-image fs-1"></i>
                 </div>
                 
                 <div class="card-body">
                     <span class="badge bg-info mb-2" th:text="${item.category}"></span>
-                    <h5 class="card-title text-truncate" th:text="${item.question}"></h5>
-                    <p class="card-text text-muted small">答え: <span th:text="${item.answer}"></span></p>
-                    <p class="card-text small text-truncate" th:text="${item.nextMsg}"></p>
+                    <h5 class="card-title text-truncate" th:text="${item.question}" th:title="${item.question}"></h5>
+                    <div class="mb-1">
+                        <small class="text-muted">答え:</small> <span class="fw-bold" th:text="${item.answer}"></span>
+                    </div>
+                    <p class="card-text small text-truncate text-muted" th:text="${item.nextMsg}" th:title="${item.nextMsg}"></p>
                 </div>
-                <div class="card-footer bg-white border-top-0">
-                    <form th:action="@{/user/catalog/import}" method="post">
+
+                <div class="card-footer bg-white border-top-0 pb-3">
+                    <form th:unless="${isSuperAdmin}" th:action="@{/user/catalog/import}" method="post">
                         <input type="hidden" name="id" th:value="${item.id}">
                         <button type="submit" class="btn btn-outline-primary w-100">
-                            <i class="bi bi-plus-circle me-1"></i>この問題を追加
+                            <i class="bi bi-box-arrow-in-down me-1"></i>この問題を追加
                         </button>
                     </form>
+
+                    <div th:if="${isSuperAdmin}" class="d-flex gap-2">
+                        <a th:href="@{/admin/catalog/edit/{id}(id=${item.id})}" class="btn btn-outline-success w-50">
+                            <i class="bi bi-pencil me-1"></i>編集
+                        </a>
+                        
+                        <form th:action="@{/admin/catalog/delete/{id}(id=${item.id})}" method="post" class="w-50"
+                              onsubmit="return confirm('【警告】\nこのカタログ問題を削除しますか？\n（既にインポート済みのイベントには影響しません）');">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash me-1"></i>削除
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
+        </div>
+        
+        <div th:if="${#lists.isEmpty(catalog)}" class="col-12 text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            カタログに問題がありません
         </div>
     </div>
 </body>
