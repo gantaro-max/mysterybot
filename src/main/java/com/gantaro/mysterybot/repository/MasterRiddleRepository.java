@@ -13,6 +13,8 @@ public interface MasterRiddleRepository {
 
     void insert(MasterRiddle masterRiddle);
 
+    void update(MasterRiddle masterRiddle);
+
     void delete(Integer id);
 
 }
