@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.bot.jackson.ModelObjectMapper;
-// v9.x の FlexMessage をインポート
 import com.linecorp.bot.messaging.model.FlexMessage;
 import com.linecorp.bot.messaging.model.Message;
 
