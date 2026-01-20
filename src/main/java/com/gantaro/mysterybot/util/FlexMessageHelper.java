@@ -1,5 +1,6 @@
 package com.gantaro.mysterybot.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,25 +17,23 @@ public class FlexMessageHelper {
         @Value("${mysterybot.app-url}")
         private String appUrl;
 
-        // LINE SDKに含まれる「MapからFlexMessageクラスへ変換するツール」
+        // LINE SDK 専用の Mapper を使用（これを使えば正確に変換されます）
         private static final ObjectMapper objectMapper = ModelObjectMapper.createNewObjectMapper();
 
-        // 正解返信用のカード
-        // ★修正: 第3引数を Integer から String (UUID) に変更
+        /**
+         * 正解時のメッセージカードを作成
+         */
         public Message createCorrectMessage(String storyText, String nextQuestionText,
                         String nextImageUuid) {
                 try {
+                        // 1. バブルの枠組み
                         Map<String, Object> bubble = new HashMap<>();
                         bubble.put("type", "bubble");
 
-                        // -------------------------------------------------
-                        // ★追加: 画像ブロック (Hero)
-                        // -------------------------------------------------
-                        // 次の問題の画像がある場合は、正解カードの上部に表示する
+                        // 2. Hero (画像)
                         if (nextImageUuid != null) {
                                 Map<String, Object> hero = new HashMap<>();
                                 hero.put("type", "image");
-                                // ★修正: UUIDを使った公開用URL
                                 hero.put("url", appUrl + "/public/image/" + nextImageUuid);
                                 hero.put("size", "full");
                                 hero.put("aspectRatio", "16:9");
@@ -42,95 +41,111 @@ public class FlexMessageHelper {
                                 bubble.put("hero", hero);
                         }
 
-                        // -------------------------------------------------
-                        // 1. ヘッダー (STAGE CLEAR)
-                        // -------------------------------------------------
+                        // 3. Header (緑色)
                         Map<String, Object> header = new HashMap<>();
                         header.put("type", "box");
                         header.put("layout", "vertical");
-                        header.put("backgroundColor", "#2CBF4E");
+                        header.put("backgroundColor", "#2CBF4E"); // 緑色
 
-                        Map<String, Object> titleText = new HashMap<>();
-                        titleText.put("type", "text");
-                        titleText.put("text", "🎉 STAGE CLEAR 🎉");
-                        titleText.put("color", "#FFFFFF");
-                        titleText.put("weight", "bold");
-                        titleText.put("align", "center");
+                        Map<String, Object> headerText = new HashMap<>();
+                        headerText.put("type", "text");
+                        headerText.put("text", "🎉 STAGE CLEAR 🎉");
+                        headerText.put("color", "#FFFFFF");
+                        headerText.put("weight", "bold");
+                        headerText.put("align", "center");
 
-                        header.put("contents", List.of(titleText));
-                        bubble.put("header", header); // ★修正: 作成したheaderをbubbleに追加
+                        header.put("contents", List.of(headerText));
+                        bubble.put("header", header);
 
-                        // -------------------------------------------------
-                        // 2. 本文 (ストーリー)
-                        // -------------------------------------------------
+                        // 4. Body (ストーリー ＋ 次の問題)
                         Map<String, Object> body = new HashMap<>();
                         body.put("type", "box");
                         body.put("layout", "vertical");
 
+                        List<Map<String, Object>> bodyContents = new ArrayList<>();
+
+                        // (A) ストーリー
                         Map<String, Object> story = new HashMap<>();
                         story.put("type", "text");
                         story.put("text", storyText);
                         story.put("wrap", true);
                         story.put("size", "md");
                         story.put("color", "#555555");
+                        bodyContents.add(story);
 
-                        body.put("contents", List.of(story));
-                        bubble.put("body", body); // ★修正: 作成したbodyをbubbleに追加
+                        // (B) 区切り線
+                        Map<String, Object> separator = new HashMap<>();
+                        separator.put("type", "separator");
+                        separator.put("margin", "lg");
+                        bodyContents.add(separator);
 
-                        // -------------------------------------------------
-                        // 3. フッター (次の問題)
-                        // -------------------------------------------------
-                        Map<String, Object> footer = new HashMap<>();
-                        footer.put("type", "box");
-                        footer.put("layout", "vertical");
-
+                        // (C) 「次の問題」ラベル
                         Map<String, Object> labelText = new HashMap<>();
                         labelText.put("type", "text");
                         labelText.put("text", "▼ 次の問題");
                         labelText.put("size", "xs");
                         labelText.put("color", "#aaaaaa");
                         labelText.put("align", "center");
+                        labelText.put("margin", "lg");
+                        bodyContents.add(labelText);
 
+                        // (D) 次の問題文
                         Map<String, Object> nextQText = new HashMap<>();
                         nextQText.put("type", "text");
                         nextQText.put("text", nextQuestionText);
                         nextQText.put("wrap", true);
-                        nextQText.put("size", "sm");
+                        nextQText.put("size", "md");
                         nextQText.put("weight", "bold");
                         nextQText.put("align", "center");
+                        nextQText.put("margin", "sm");
+                        nextQText.put("color", "#333333");
+                        bodyContents.add(nextQText);
 
-                        footer.put("contents", List.of(labelText, nextQText));
-                        bubble.put("footer", footer); // ★修正: 作成したfooterをbubbleに追加
+                        body.put("contents", bodyContents);
+                        bubble.put("body", body);
 
-                        // -------------------------------------------------
-                        // 4. FlexMessageへ変換
-                        // -------------------------------------------------
-                        Map<String, Object> flexMessageMap = new HashMap<>();
-                        flexMessageMap.put("type", "flex");
-                        flexMessageMap.put("altText", "正解！");
-                        flexMessageMap.put("contents", bubble);
+                        // 5. Footer (補足)
+                        Map<String, Object> footer = new HashMap<>();
+                        footer.put("type", "box");
+                        footer.put("layout", "vertical");
 
-                        return objectMapper.convertValue(flexMessageMap, FlexMessage.class);
+                        Map<String, Object> footerText = new HashMap<>();
+                        footerText.put("type", "text");
+                        footerText.put("text", "※答えを入力 / 「ヒント」でヒント表示");
+                        footerText.put("size", "xs");
+                        footerText.put("color", "#aaaaaa");
+                        footerText.put("align", "center");
+
+                        footer.put("contents", List.of(footerText));
+                        bubble.put("footer", footer);
+
+                        // 6. FlexMessageコンテナに格納
+                        Map<String, Object> flexContainer = new HashMap<>();
+                        flexContainer.put("type", "flex");
+                        flexContainer.put("altText", "正解！次の問題です");
+                        flexContainer.put("contents", bubble);
+
+                        // ★ここでMapをSDKのFlexMessageクラスに変換
+                        return objectMapper.convertValue(flexContainer, FlexMessage.class);
 
                 } catch (Exception e) {
                         e.printStackTrace();
-                        throw new RuntimeException("メッセージ作成エラー", e);
+                        throw new RuntimeException("Flex Message作成エラー", e);
                 }
         }
 
-        // 出題用のカード
+        /**
+         * 出題時のメッセージカードを作成
+         */
         public Message createQuestionMessage(String questionText, String imageUuid) {
                 try {
                         Map<String, Object> bubble = new HashMap<>();
                         bubble.put("type", "bubble");
 
-                        // -------------------------------------------------
-                        // 画像ブロック (Hero)
-                        // -------------------------------------------------
+                        // Hero
                         if (imageUuid != null) {
                                 Map<String, Object> hero = new HashMap<>();
                                 hero.put("type", "image");
-                                // ★修正: UUIDを使った公開用URL
                                 hero.put("url", appUrl + "/public/image/" + imageUuid);
                                 hero.put("size", "full");
                                 hero.put("aspectRatio", "16:9");
@@ -138,71 +153,63 @@ public class FlexMessageHelper {
                                 bubble.put("hero", hero);
                         }
 
-                        // -------------------------------------------------
-                        // 1. ヘッダー
-                        // -------------------------------------------------
+                        // Header (青色)
                         Map<String, Object> header = new HashMap<>();
                         header.put("type", "box");
                         header.put("layout", "vertical");
-                        header.put("backgroundColor", "#0055aa");
+                        header.put("backgroundColor", "#0055aa"); // 青色
 
-                        Map<String, Object> titleText = new HashMap<>();
-                        titleText.put("type", "text");
-                        titleText.put("text", "📝 MISSION 📝");
-                        titleText.put("color", "#FFFFFF");
-                        titleText.put("weight", "bold");
-                        titleText.put("align", "center");
+                        Map<String, Object> headerText = new HashMap<>();
+                        headerText.put("type", "text");
+                        headerText.put("text", "📝 MISSION 📝");
+                        headerText.put("color", "#FFFFFF");
+                        headerText.put("weight", "bold");
+                        headerText.put("align", "center");
 
-                        header.put("contents", List.of(titleText));
+                        header.put("contents", List.of(headerText));
                         bubble.put("header", header);
 
-                        // -------------------------------------------------
-                        // 2. 本文
-                        // -------------------------------------------------
+                        // Body
                         Map<String, Object> body = new HashMap<>();
                         body.put("type", "box");
                         body.put("layout", "vertical");
 
-                        Map<String, Object> questionBody = new HashMap<>();
-                        questionBody.put("type", "text");
-                        questionBody.put("text", questionText);
-                        questionBody.put("wrap", true);
-                        questionBody.put("size", "md");
-                        questionBody.put("color", "#333333");
+                        Map<String, Object> qText = new HashMap<>();
+                        qText.put("type", "text");
+                        qText.put("text", questionText);
+                        qText.put("wrap", true);
+                        qText.put("size", "md");
+                        qText.put("color", "#333333");
 
-                        body.put("contents", List.of(questionBody));
+                        body.put("contents", List.of(qText));
                         bubble.put("body", body);
 
-                        // -------------------------------------------------
-                        // 3. フッター
-                        // -------------------------------------------------
+                        // Footer
                         Map<String, Object> footer = new HashMap<>();
                         footer.put("type", "box");
                         footer.put("layout", "vertical");
 
-                        Map<String, Object> infoText = new HashMap<>();
-                        infoText.put("type", "text");
-                        infoText.put("text", "※答えを入力 / 「ヒント」でヒント表示");
-                        infoText.put("size", "xs");
-                        infoText.put("color", "#aaaaaa");
-                        infoText.put("align", "center");
+                        Map<String, Object> fText = new HashMap<>();
+                        fText.put("type", "text");
+                        fText.put("text", "※答えを入力 / 「ヒント」でヒント表示");
+                        fText.put("size", "xs");
+                        fText.put("color", "#aaaaaa");
+                        fText.put("align", "center");
 
-                        footer.put("contents", List.of(infoText));
+                        footer.put("contents", List.of(fText));
                         bubble.put("footer", footer);
 
-                        // -------------------------------------------------
-                        // 5. FlexMessageへ変換
-                        // -------------------------------------------------
-                        Map<String, Object> flexMessageMap = new HashMap<>();
-                        flexMessageMap.put("type", "flex");
-                        flexMessageMap.put("altText", "新しい問題です");
-                        flexMessageMap.put("contents", bubble);
+                        // FlexMessageへ
+                        Map<String, Object> flexContainer = new HashMap<>();
+                        flexContainer.put("type", "flex");
+                        flexContainer.put("altText", "新しい問題です");
+                        flexContainer.put("contents", bubble);
 
-                        return objectMapper.convertValue(flexMessageMap, FlexMessage.class);
+                        return objectMapper.convertValue(flexContainer, FlexMessage.class);
 
                 } catch (Exception e) {
                         e.printStackTrace();
-                        throw new RuntimeException("メッセージ作成エラー", e);
+                        throw new RuntimeException("Flex Message作成エラー", e);
                 }
         }
 }

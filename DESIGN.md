@@ -4,7 +4,6 @@
 
 LINE Bot を活用した、周遊型・イベント型謎解きゲーム作成プラットフォーム。
 「グループ ID（テナント）」を分けることで、1 つのシステムで複数の企業やイベント（結婚式余興、社内レクリエーションなど）を同時に稼働させることを可能とする。
-Web ブラウザ上で動作する管理画面を提供し、SQL を操作せずにイベントの開設や謎の登録を可能にする。
 
 ## 2. 要件定義 (Requirements)
 
@@ -21,46 +20,36 @@ Web ブラウザ上で動作する管理画面を提供し、SQL を操作せず
 - **全イベント管理:** 稼働中の全イベント一覧表示、強制削除。
 - **ゴッドログイン (God Login):** パスワードなしで任意のイベント管理画面へログインし、代理操作を行う。
 - **カタログ管理:** 全イベントで共有可能な「マスター問題」の登録・管理。
-- **強制リセット:** 進行中のイベントの時間をリセットし、「準備中」の状態に戻す。
+- **強制リセット:** 進行中のイベント時間をリセットし、「準備中」の状態に戻す。
 
 #### 【イベント主催者機能】 (`/user`)
 
 - **ダッシュボード:** イベントの状態確認、開始操作、参加用 QR コードの表示。
 - **シナリオ編集 (CRUD):**
   - 問題文、正解、ヒント、画像、次メッセージの登録・編集。
-  - 画像アップロード時、自動的にリサイズ・軽量化を行う。
-  - 「カタログ」からの問題インポート機能。
-- **設定変更:** 出題順（順番通り/ランダム）の切り替え。
-- **進捗確認:** ランキングボード（リアルタイム順位表）の表示。
+  - **カタログインポート:** 管理者が作成した既成問題を自身のイベントに取り込む。
+  - **レスポンシブUI:** スマホ・PC両対応の管理画面。
+- **設定変更:** ランダム出題モードの切り替え。
+- **ランキング:** 参加者のクリアタイムをリアルタイムでランキング表示。
 
 #### 【プレイヤー機能】 (LINE Bot)
 
 - **ゲーム開始:** 「開始 [イベント ID]」コマンドによるゲーム参加。
 - **回答送信:** LINE トーク画面での回答入力。
 - **正誤判定:** Bot による自動判定と即時返信（正解時は次の問題/画像を送信）。
-- **ヒント機能:** 「ヒント」と送ることで設定されたヒントを閲覧可能。
-- **途中再開:** 進行状況の自動保存。
-- **遊び方ガイド:** 「遊び方」や「ヘルプ」コマンドでのガイド表示。
-
-### 2.3 非機能要件
-
-- **レスポンス:** LINE 返信の即応性。
-- **セキュリティ:**
-  - 管理画面: セッションベースのログイン認証。権限による URL アクセス制御。
-  - 画像アクセス: 推測不可能な UUID を使用した公開 URL (`/public/image/{uuid}`) を採用し、連番 ID による不正閲覧（ネタバレ）を防止する。
-- **制限時間:** イベント開始から 24 時間経過後、自動的に回答を受け付けなくする。
-
----
+- **ヒント機能:** 「ヒント」コマンドでヒントを表示。
+- **遊び方ガイド:** 「遊び方」「ヘルプ」コマンドでガイドを表示。
+- **制限時間:** イベント開始から **24時間** が経過すると、自動的に回答を受け付けなくなりイベント終了となる。
 
 ## 3. 基本設計 (Basic Design)
 
 ### 3.1 アーキテクチャ
 
 - **Backend:** Java 21, Spring Boot
-- **Frontend:** Thymeleaf, Bootstrap 5 (Server-Side Rendering)
-- **Database:** MySQL 8.0 (Docker / TiDB Serverless)
+- **Frontend:** Thymeleaf, Bootstrap 5
+- **Database:** MySQL 8.0 (TiDB Serverless)
 - **ORM:** MyBatis
-- **Messaging:** LINE Messaging API (Webhook / Flex Message)
+- **Messaging:** LINE Messaging API (Flex Message)
 
 ### 3.2 ディレクトリ構成 (Controller 層)
 
@@ -69,7 +58,7 @@ URL プレフィックスにより役割を明確に分離する。
 | Role       | Prefix      | Controller Class        | Description                            |
 | :--------- | :---------- | :---------------------- | :------------------------------------- |
 | **認証**   | `/auth`     | `AuthController`        | ログイン、ログアウト、新規登録         |
-| **管理者** | `/admin`    | `AdminController`       | 全体管理、マスタ管理、ゴッドログイン   |
+| **管理者** | `/admin`    | `AdminController`       | 全体管理、カタログ管理、リセット       |
 | **主催者** | `/user`     | `UserController`        | イベント管理、シナリオ編集、ランキング |
 | **Bot**    | `/callback` | `LineWebhookController` | LINE Webhook の受信・処理              |
 | **画像**   | `/public`   | `ImageController`       | 画像配信 (認証不要・UUID アクセス)     |
@@ -77,13 +66,6 @@ URL プレフィックスにより役割を明確に分離する。
 ---
 
 ## 4. テーブル設計 (Schema Design)
-
-### ER 図 (概要)
-
-- `team_groups` (1) --- (N) `riddles`
-- `team_groups` (1) --- (N) `players`
-- `players` (1) --- (N) `solved_histories`
-- `riddles` (N) --- (1) `riddle_images` (Optional)
 
 ### 4.1 team_groups (イベント管理)
 
@@ -93,7 +75,7 @@ URL プレフィックスにより役割を明確に分離する。
 | `group_name`      | VARCHAR     | イベント名                         |
 | `admin_pass`      | VARCHAR     | 管理用パスワード                   |
 | `is_random_order` | BOOLEAN     | ランダム出題モードフラグ           |
-| `started_at`      | DATETIME    | イベント開始日時 (null なら準備中) |
+| `started_at`      | TIMESTAMP   | イベント開始日時 (null なら準備中) |
 
 ### 4.2 riddles (シナリオデータ)
 
@@ -110,96 +92,59 @@ URL プレフィックスにより役割を明確に分離する。
 
 ### 4.3 players (参加者)
 
-| Column              | Type        | Description                             |
-| :------------------ | :---------- | :-------------------------------------- |
-| `id`                | INT(PK)     | 自動採番                                |
-| `line_user_id`      | VARCHAR     | LINE User ID                            |
-| `group_id`          | VARCHAR(FK) | 参加イベント                            |
-| `current_stage`     | INT         | 現在の進行度                            |
-| `player_name`       | VARCHAR     | チーム名/個人名                         |
-| `start_at`          | DATETIME    | 開始時刻                                |
-| `finished_at`       | DATETIME    | 全問クリア時刻                          |
-| `current_riddle_id` | INT         | 現在挑戦中の問題 ID（ランダムモード用） |
+| Column          | Type        | Description     |
+| :-------------- | :---------- | :-------------- |
+| `id`            | INT(PK)     | 自動採番        |
+| `line_user_id`  | VARCHAR     | LINE User ID    |
+| `group_id`      | VARCHAR(FK) | 参加イベント    |
+| `current_stage` | INT         | 現在の進行度    |
+| `player_name`   | VARCHAR     | チーム名/個人名 |
+| `start_at`      | DATETIME    | 開始時刻        |
+| `finished_at`   | DATETIME    | 全問クリア時刻  |
 
 ### 4.4 riddle_images (画像ストレージ)
 
 | Column      | Type        | Description                 |
 | :---------- | :---------- | :-------------------------- |
-| `id`        | INT(PK)     | 内部管理 ID (JOIN 用)       |
+| `id`        | INT(PK)     | 内部管理 ID                 |
 | `uuid`      | VARCHAR(36) | **公開用 ID (URL に使用)**  |
 | `data`      | LONGBLOB    | 画像バイナリデータ          |
 | `mime_type` | VARCHAR     | MIME タイプ (image/jpeg 等) |
 
 ### 4.5 master_riddles (カタログ用マスタ)
 
-| Column        | Type    | Description               |
-| :------------ | :------ | :------------------------ |
-| `id`          | INT(PK) | マスタ ID                 |
-| `category`    | VARCHAR | カテゴリ (初級, 結婚式等) |
-| `question`... | -       | 問題データ一式            |
+| Column     | Type    | Description                  |
+| :--------- | :------ | :--------------------------- |
+| `id`       | INT(PK) | マスタ ID                    |
+| `category` | VARCHAR | カテゴリ (初級, 結婚式等)    |
+| `question` | TEXT    | 問題文                       |
+| `answer`   | VARCHAR | 正解                         |
+| `next_msg` | TEXT    | 正解メッセージ               |
+| `hint_msg` | VARCHAR | ヒント                       |
+| `image_id` | INT     | 画像 ID (riddle_images 参照) |
 
 ---
 
-## 5. エンドポイント設計 (Endpoints)
+## 5. エンドポイント設計 (主要API)
 
-### 5.1 認証 (`AuthController`)
+### アプリ管理者 (`AdminController`)
 
-- `GET /auth/login` : ログイン画面
-- `POST /auth/login` : ログイン処理
-- `GET /auth/register` : 新規イベント作成画面
-- `POST /auth/register` : イベント作成処理
-
-### 5.2 アプリ管理者 (`AdminController`)
-
-- `GET /admin/dashboard` : 統合管理ダッシュボード
 - `POST /admin/impersonate/{groupId}` : 指定イベントへなりすましログイン
-- `POST /admin/delete/{groupId}` : イベント強制削除
-- `POST /admin/catalog/add-master` : カタログへの問題登録
 - `POST /admin/reset-time/{groupId}` : イベント開始時間の強制リセット
+- `POST /admin/catalog/add-master` : カタログへの問題登録
 
-### 5.3 イベント主催者 (`UserController`)
+### イベント主催者 (`UserController`)
 
-- `GET /user/dashboard` : イベント管理トップ
-- `POST /user/start-event` : イベント本番開始
-- `GET /user/riddles` : シナリオ一覧
+- `POST /user/start-event` : イベント本番開始 (24hカウントダウン開始)
 - `POST /user/riddles/add` : 謎の新規登録 (画像 Upload 含む)
-- `POST /user/riddles/update` : 謎の更新
-- `GET /user/ranking` : リアルタイムランキング表示
-- `GET /user/catalog` : カタログ一覧表示
 - `POST /user/catalog/import` : カタログから自イベントへコピー
-
-### 5.4 画像配信 (`ImageController`)
-
-- `GET /public/image/{uuid}` : 画像データの配信 (UUID によるアクセス)
+- `GET /user/ranking` : リアルタイムランキング表示
 
 ---
 
-## 6. クラス設計 (主要コンポーネント)
+## 6. システム構成図 (Diagrams)
 
-### Controller
-
-- **`AuthController`**: 認証とセッション管理。
-- **`AdminController`**: スーパー Admin 操作。
-- **`UserController`**: 一般主催者の操作。
-- **`LineWebhookController`**: LINE Bot のリクエスト処理。
-- **`ImageController`**: 画像バイナリの配信。
-
-### Service
-
-- **`EventAdminService`**: 管理画面側の全ロジック（CRUD、画像 UUID 発行、認証等）。
-- **`GameService`**: Bot 側のゲーム進行ロジック。
-
-### Util
-
-- **`FlexMessageHelper`**: LINE Flex Message JSON への変換（UUID ベースの URL 生成を含む）。
-
----
-
-## 7. システム構成図 (Diagrams)
-
-### 7.1 エンティティ関係図 (ER Diagram Class View)
-
-データベースのテーブルと対応するエンティティの関係。
+### 6.1 クラス設計概要 (Class Diagram)
 
 ```mermaid
 classDiagram
@@ -209,52 +154,36 @@ classDiagram
         +String groupName
         +String adminPass
         +Boolean isRandomOrder
+        +Timestamp startedAt
     }
 
     %% 参加者
     class Player {
-        +Integer id [PK]
+        +Integer id
         +String lineUserId
-        +String groupId [FK]
+        +String groupId
         +Integer currentStage
     }
 
     %% 謎データ
     class Riddle {
-        +Integer id [PK]
-        +String groupId [FK]
+        +Integer id
         +Integer stageNo
         +String question
         +String answer
-        +Integer imageId [FK]
-    }
-
-    %% 画像データ
-    class RiddleImage {
-        +Integer id [PK]
-        +String uuid [Unique]
-        +byte[] data
-    }
-
-    %% 履歴
-    class SolvedHistory {
-        +Integer id
-        +Integer playerId [FK]
-        +Integer riddleId [FK]
+        +Integer imageId
     }
 
     TeamGroup "1" -- "*" Player : has
     TeamGroup "1" -- "*" Riddle : manages
-    Player "1" -- "*" SolvedHistory : records
-    Riddle "1" -- "0..1" RiddleImage : uses
 ```
 
-### 7.2 アプリケーション構造 (Controller & Service)
+### 6.2 アプリケーション構造 (Controller & Service)
 
 ```mermaid
 graph TD
-    User((ユーザー/ブラウザ))
-    BotUser((LINE Bot User))
+    User((ユーザー))
+    BotUser((LINE Bot))
 
     subgraph Controllers
         AC[AdminController]
@@ -269,6 +198,10 @@ graph TD
         GS[GameService]
     end
 
+    subgraph Utils
+        FMH[FlexMessageHelper]
+    end
+
     subgraph Repositories
         DB[(Database)]
     end
@@ -276,17 +209,13 @@ graph TD
     User --> AuC
     User --> AC
     User --> UC
-    User --> IC
     BotUser --> LWC
-    BotUser --> IC
 
-    AuC --> EAS
-    AC --> EAS
-    UC --> EAS
+    LWC --> FMH
     LWC --> GS
+    UC --> EAS
+    AC --> EAS
 
-    IC --> DB
-
-    EAS --> DB
     GS --> DB
+    EAS --> DB
 ```
