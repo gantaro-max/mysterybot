@@ -1,7 +1,8 @@
-# MysteryBot セキュリティ修正 実装指示書
+# MysteryBot セキュリティ修正 実装指示書 v2
 
-> Codex向け実装仕様書。上から順に実装すること。
-> 各タスクは独立したコミットとして分けることを推奨。
+> Codex向け実装仕様書。
+> **【重要】`git filter-repo` によってワーキングツリーがリセットされ、前回実装した変更がすべて失われた。本書は現在のファイル状態を前提に再実装するための指示書である。**
+> 上から順に実装し、各タスクを独立したコミットとして分けること。
 
 ---
 
@@ -13,101 +14,138 @@
 - **認証方式:** セッションベース。`HttpSession` の `loginGroupId` 属性でユーザーを識別。
   - `"admin"` ならスーパーAdmin、それ以外ならイベント主催者
 - **重要制約:** `/callback` エンドポイントはLINE外部サーバーからのPOSTを受け取るため、CSRFトークン検証を除外すること
+- **`build.gradle` は対応済み:** `spring-boot-starter-security` と `thymeleaf-extras-springsecurity6` は追加済み
+- **`SecurityConfig.java` は作成済み:** `src/main/java/com/gantaro/mysterybot/config/SecurityConfig.java` に存在する
 
 ---
 
 ## タスク一覧
 
-| ID | 内容 | 優先度 |
+| ID | 内容 | 状態 |
 |:--|:--|:--|
-| [TASK-1](#task-1-secrets) | 秘密情報をリポジトリから除外 | 今すぐ |
-| [TASK-2](#task-2-testcontroller) | デバッグエンドポイント削除 | 今すぐ |
-| [TASK-3](#task-3-idor) | IDOR修正（謎問題の所有者検証） | 今すぐ |
-| [TASK-4](#task-4-password) | パスワードBCryptハッシュ化 | 早急 |
-| [TASK-5](#task-5-csrf) | Spring Security追加とCSRF保護 | 早急 |
-| [TASK-6](#task-6-groupid) | groupId予約語バリデーション | 早急 |
-| [TASK-7](#task-7-upload) | ファイルアップロードのMIME検証 | 計画的 |
-| [TASK-8](#task-8-impersonate) | 管理者なりすまし設計修正 | 計画的 |
+| [TASK-1](#task-1) | TestController削除 | 未対応 |
+| [TASK-2](#task-2) | EventAdminService: BCrypt・IDOR・バリデーション | 未対応 |
+| [TASK-3](#task-3) | AuthController: セッション固定対策・ログアウトPOST化 | 未対応 |
+| [TASK-4](#task-4) | AdminController: なりすまし安全化・復帰エンドポイント追加 | 未対応 |
+| [TASK-5](#task-5) | UserController: IDOR対策・なりすまし表示 | 未対応 |
+| [TASK-6](#task-6) | ImageController: Content-Type固定 | 未対応 |
+| [TASK-7](#task-7) | HTMLテンプレート: th:action・ログアウトPOST化 | 未対応 |
 
 ---
 
-## TASK-1: 秘密情報をリポジトリから除外 {#task-1-secrets}
+## TASK-1: TestController削除 {#task-1}
 
-### 1-A: `.gitignore` に `application.properties` を追加
+**対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/TestController.java`
 
-**対象ファイル:** `.gitignore`（プロジェクトルートに存在する場合は追記、なければ新規作成）
+認証不要で全謎問題と正解を返す危険なエンドポイント。**ファイルごと削除する。**
 
-末尾に以下を追加：
 ```
-src/main/resources/application.properties
+# 削除コマンド
+git rm src/main/java/com/gantaro/mysterybot/controller/TestController.java
 ```
-
-### 1-B: `application.properties.example` を新規作成
-
-**新規作成ファイル:** `src/main/resources/application.properties.example`
-
-内容（実際の値はすべてプレースホルダーに置き換える）：
-```properties
-spring.application.name=mysterybot
-spring.datasource.url=jdbc:mysql://localhost:3307/mystery_game
-spring.datasource.username=YOUR_DB_USERNAME
-spring.datasource.password=YOUR_DB_PASSWORD
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-mybatis.configuration.map-underscore-to-camel-case=true
-mybatis.mapper-locations=classpath:mappers/*.xml
-line.bot.channel-token=YOUR_LINE_CHANNEL_TOKEN
-line.bot.channel-secret=YOUR_LINE_CHANNEL_SECRET
-line.bot.handler.path=/callback
-line.bot.friend-url=https://lin.ee/YOUR_FRIEND_LINK
-spring.servlet.multipart.max-file-size=10MB
-spring.servlet.multipart.max-request-size=10MB
-mysterybot.app-url=https://your-app-url.example.com
-# spring.sql.init.mode=always
-```
-
-### 1-C: 現在の `application.properties` から秘密情報を削除
-
-**対象ファイル:** `src/main/resources/application.properties`
-
-`spring.datasource.password`、`line.bot.channel-token`、`line.bot.channel-secret` の値を
-プレースホルダーに置き換える（1-Bと同じ形式）。
-
-> **注意:** Gitの履歴から既存の秘密情報を削除するには `git filter-repo` の実行が別途必要。
-> それは開発者が手動で行うこと（このタスクのスコープ外）。
 
 ---
 
-## TASK-2: デバッグエンドポイント削除 {#task-2-testcontroller}
-
-### 削除するファイル
-
-```
-src/main/java/com/gantaro/mysterybot/controller/TestController.java
-```
-
-このファイルを**完全に削除**する。他のファイルへの参照はないため、削除のみでOK。
-
----
-
-## TASK-3: IDOR修正（謎問題の所有者検証） {#task-3-idor}
-
-**問題:** `EventAdminService.getRiddle(id)` はIDのみで謎問題を取得するため、
-他テナントのIDを指定すれば誰でも参照・更新・削除できる。
-
-### 3-A: `EventAdminService.java` に所有者チェックメソッドを追加
+## TASK-2: EventAdminService 修正 {#task-2}
 
 **対象ファイル:** `src/main/java/com/gantaro/mysterybot/service/EventAdminService.java`
 
-既存の `getRiddle(Integer id)` メソッド（74行目付近）を以下の2メソッドに置き換える：
+### 2-A: インポートと依存関係追加
+
+既存のimport群に以下を追加：
 
 ```java
-// 既存メソッドはそのまま残す（GameServiceなど内部からの呼び出し用）
-public Riddle getRiddle(Integer id) {
-    return riddleRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("謎が見つかりません:ID" + id));
-}
+import java.util.Set;
+import org.springframework.security.crypto.password.PasswordEncoder;
+```
 
-// 所有者チェック付きの新メソッドを追加（Controllerから呼ぶ）
+クラスフィールドに `PasswordEncoder` を追加（`@RequiredArgsConstructor` で自動インジェクション）：
+
+```java
+// 既存フィールドの末尾に追加
+private final PasswordEncoder passwordEncoder;
+```
+
+### 2-B: 予約語定数を追加
+
+クラスフィールドの直後に追加：
+
+```java
+private static final Set<String> RESERVED_GROUP_IDS =
+        Set.of("admin", "system", "root", "superadmin", "test");
+```
+
+### 2-C: `login()` メソッドをBCrypt対応に変更
+
+**変更前:**
+```java
+public boolean login(String groupId, String password) {
+    Optional<TeamGroup> group = teamGroupRepository.findByGroupId(groupId);
+    if (group.isEmpty())
+        return false;
+    String savedPass = group.get().getAdminPass();
+    return savedPass != null && savedPass.equals(password);
+}
+```
+
+**変更後:**
+```java
+public boolean login(String groupId, String password) {
+    Optional<TeamGroup> group = teamGroupRepository.findByGroupId(groupId);
+    if (group.isEmpty())
+        return false;
+    String savedPass = group.get().getAdminPass();
+    if (savedPass == null)
+        return false;
+    return passwordEncoder.matches(password, savedPass);
+}
+```
+
+### 2-D: `createEvent()` にバリデーションとBCryptを追加
+
+**変更前:**
+```java
+@Transactional
+public void createEvent(String groupId, String groupName, String password) {
+    if (teamGroupRepository.findByGroupId(groupId).isPresent()) {
+        throw new IllegalArgumentException("そのイベントIDは既に使用されています");
+    }
+    TeamGroup newGroup = new TeamGroup();
+    newGroup.setGroupId(groupId);
+    newGroup.setGroupName(groupName);
+    newGroup.setAdminPass(password);
+    newGroup.setIsRandomOrder(false);
+    teamGroupRepository.insert(newGroup);
+}
+```
+
+**変更後:**
+```java
+@Transactional
+public void createEvent(String groupId, String groupName, String password) {
+    if (RESERVED_GROUP_IDS.contains(groupId.toLowerCase())) {
+        throw new IllegalArgumentException("そのイベントIDは使用できません");
+    }
+    if (!groupId.matches("^[a-zA-Z0-9_-]{3,30}$")) {
+        throw new IllegalArgumentException("イベントIDは半角英数字・ハイフン・アンダーバーのみ、3〜30文字で入力してください");
+    }
+    if (teamGroupRepository.findByGroupId(groupId).isPresent()) {
+        throw new IllegalArgumentException("そのイベントIDは既に使用されています");
+    }
+    TeamGroup newGroup = new TeamGroup();
+    newGroup.setGroupId(groupId);
+    newGroup.setGroupName(groupName);
+    newGroup.setAdminPass(passwordEncoder.encode(password));
+    newGroup.setIsRandomOrder(false);
+    teamGroupRepository.insert(newGroup);
+}
+```
+
+### 2-E: `getRiddleOwnedBy()` メソッドを追加
+
+`getRiddle()` メソッドの直後に追加：
+
+```java
 public Riddle getRiddleOwnedBy(Integer id, String groupId) {
     Riddle riddle = getRiddle(id);
     if (!groupId.equals(riddle.getGroupId())) {
@@ -117,13 +155,30 @@ public Riddle getRiddleOwnedBy(Integer id, String groupId) {
 }
 ```
 
-既存の `updateRiddle` メソッド（98行目付近）の先頭に所有者チェックを追加：
+### 2-F: `updateRiddle()` シグネチャに `groupId` を追加して所有者チェック
 
+**変更前:**
 ```java
 @Transactional
-public void updateRiddle(Integer id, String groupId, String question, String answer,
-        String nextMsg, String hintMsg, Integer imageId) {
-    // 所有者チェック（変更点: groupIdパラメータを追加して検証）
+public void updateRiddle(Integer id, String question, String answer, String nextMsg,
+        String hintMsg, Integer imageId) {
+    Riddle resultRiddle = getRiddle(id);
+    resultRiddle.setQuestion(question);
+    resultRiddle.setAnswer(answer);
+    resultRiddle.setNextMsg(nextMsg);
+    resultRiddle.setHintMsg(hintMsg);
+    if (imageId != null) {
+        resultRiddle.setImageId(imageId);
+    }
+    riddleRepository.update(resultRiddle);
+}
+```
+
+**変更後:**
+```java
+@Transactional
+public void updateRiddle(Integer id, String groupId, String question, String answer, String nextMsg,
+        String hintMsg, Integer imageId) {
     Riddle resultRiddle = getRiddleOwnedBy(id, groupId);
     resultRiddle.setQuestion(question);
     resultRiddle.setAnswer(answer);
@@ -136,26 +191,274 @@ public void updateRiddle(Integer id, String groupId, String question, String ans
 }
 ```
 
-既存の `deleteRiddle` メソッド（117行目付近）に所有者チェックを追加：
+### 2-G: `deleteRiddle()` シグネチャに `groupId` を追加して所有者チェック
 
+**変更前:**
+```java
+@Transactional
+public void deleteRiddle(Integer id) {
+    solvedHistoryRepository.deleteByRiddleId(id);
+    riddleRepository.delete(id);
+}
+```
+
+**変更後:**
 ```java
 @Transactional
 public void deleteRiddle(Integer id, String groupId) {
-    // 所有者チェック（変更点: groupIdパラメータを追加して検証）
     getRiddleOwnedBy(id, groupId);
     solvedHistoryRepository.deleteByRiddleId(id);
     riddleRepository.delete(id);
 }
 ```
 
-### 3-B: `UserController.java` の呼び出し箇所を修正
+### 2-H: `uploadImage()` にマジックバイト検証を追加
+
+**変更前:**
+```java
+@Transactional
+public Integer uploadImage(MultipartFile file) throws IOException {
+    if (file == null || file.isEmpty())
+        return null;
+
+    byte[] originalData = file.getBytes();
+
+    byte[] savedData;
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(originalData);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        Thumbnails.of(bis).width(800).outputFormat("jpg")
+                .outputQuality(0.8).toOutputStream(bos);
+        savedData = bos.toByteArray();
+    } catch (Exception e) {
+        throw new IOException("画像ファイルの処理に失敗しました");
+    }
+
+    RiddleImage img = new RiddleImage();
+    img.setData(savedData);
+    img.setMimeType(file.getContentType());
+    img.setUuid(UUID.randomUUID().toString());
+    riddleImageRepository.insert(img);
+
+    return img.getId();
+}
+```
+
+**変更後:**
+```java
+@Transactional
+public Integer uploadImage(MultipartFile file) throws IOException {
+    if (file == null || file.isEmpty())
+        return null;
+
+    byte[] originalData = file.getBytes();
+    if (!isAllowedImageBytes(originalData)) {
+        throw new IllegalArgumentException("画像ファイル（JPEG/PNG/GIF）のみアップロードできます");
+    }
+
+    byte[] savedData;
+    try (ByteArrayInputStream bis = new ByteArrayInputStream(originalData);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        Thumbnails.of(bis).width(800).outputFormat("jpg")
+                .outputQuality(0.8).toOutputStream(bos);
+        savedData = bos.toByteArray();
+    } catch (Exception e) {
+        throw new IllegalArgumentException("画像ファイルを処理できませんでした");
+    }
+
+    RiddleImage img = new RiddleImage();
+    img.setData(savedData);
+    img.setMimeType("image/jpeg");
+    img.setUuid(UUID.randomUUID().toString());
+    riddleImageRepository.insert(img);
+
+    return img.getId();
+}
+```
+
+### 2-I: `isAllowedImageBytes()` ヘルパーメソッドを追加
+
+クラス末尾（`}` の直前）に追加：
+
+```java
+private boolean isAllowedImageBytes(byte[] data) {
+    if (data.length < 4)
+        return false;
+    // JPEG: FF D8 FF
+    if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF)
+        return true;
+    // PNG: 89 50 4E 47
+    if (data[0] == (byte) 0x89 && data[1] == (byte) 0x50
+            && data[2] == (byte) 0x4E && data[3] == (byte) 0x47)
+        return true;
+    // GIF: 47 49 46 38
+    return data[0] == (byte) 0x47 && data[1] == (byte) 0x49
+            && data[2] == (byte) 0x46 && data[3] == (byte) 0x38;
+}
+```
+
+---
+
+## TASK-3: AuthController 修正 {#task-3}
+
+**対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/AuthController.java`
+
+### 3-A: インポート追加
+
+```java
+import jakarta.servlet.http.HttpServletRequest;
+```
+
+### 3-B: `login()` にセッション固定対策を追加
+
+**変更前:**
+```java
+@PostMapping("/login")
+public String login(@RequestParam String groupId, @RequestParam String password, Model model) {
+    if (eventAdminService.login(groupId, password)) {
+        session.setAttribute("loginGroupId", groupId);
+```
+
+**変更後:**
+```java
+@PostMapping("/login")
+public String login(@RequestParam String groupId, @RequestParam String password, Model model,
+        HttpServletRequest request) {
+    if (eventAdminService.login(groupId, password)) {
+        request.changeSessionId();
+        session.setAttribute("loginGroupId", groupId);
+```
+
+### 3-C: `logout()` を `@GetMapping` から `@PostMapping` に変更
+
+**変更前:**
+```java
+@GetMapping("/logout")
+public String logout() {
+    session.invalidate();
+    return "redirect:/auth/login";
+}
+```
+
+**変更後:**
+```java
+@PostMapping("/logout")
+public String logout() {
+    session.invalidate();
+    return "redirect:/auth/login";
+}
+```
+
+### 3-D: `register()` にセッション固定対策とエラーハンドリング改善
+
+**変更前:**
+```java
+@PostMapping("/register")
+public String register(@RequestParam String groupId, @RequestParam String groupName,
+        @RequestParam String password, Model model) {
+    try {
+        eventAdminService.createEvent(groupId, groupName, password);
+        session.setAttribute("loginGroupId", groupId);
+        return "redirect:/user/dashboard";
+    } catch (Exception e) {
+        model.addAttribute("error", "登録失敗: IDが重複している可能性があります");
+        return "auth/register";
+    }
+}
+```
+
+**変更後:**
+```java
+@PostMapping("/register")
+public String register(@RequestParam String groupId, @RequestParam String groupName,
+        @RequestParam String password, Model model, HttpServletRequest request) {
+    try {
+        eventAdminService.createEvent(groupId, groupName, password);
+        request.changeSessionId();
+        session.setAttribute("loginGroupId", groupId);
+        return "redirect:/user/dashboard";
+    } catch (IllegalArgumentException e) {
+        model.addAttribute("error", e.getMessage());
+        return "auth/register";
+    } catch (Exception e) {
+        model.addAttribute("error", "登録に失敗しました。もう一度お試しください");
+        return "auth/register";
+    }
+}
+```
+
+---
+
+## TASK-4: AdminController 修正 {#task-4}
+
+**対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/AdminController.java`
+
+### 4-A: `impersonate()` を安全化
+
+**変更前:**
+```java
+@PostMapping("/impersonate/{groupId}")
+public String impersonate(@PathVariable String groupId) {
+    if (!"admin".equals(getLoginGroupId())) {
+        return "redirect:/auth/login";
+    }
+
+    session.setAttribute("loginGroupId", groupId);
+
+    return "redirect:/user/dashboard";
+}
+```
+
+**変更後:**
+```java
+@PostMapping("/impersonate/{groupId}")
+public String impersonate(@PathVariable String groupId) {
+    if (!"admin".equals(getLoginGroupId())) {
+        return "redirect:/auth/login";
+    }
+
+    eventAdminService.getEvent(groupId); // 存在しないgroupIdなら例外で弾く
+    session.setAttribute("originalAdminId", "admin");
+    session.setAttribute("loginGroupId", groupId);
+
+    return "redirect:/user/dashboard";
+}
+```
+
+### 4-B: `endImpersonate()` エンドポイントを追加
+
+`impersonate()` メソッドの直後に追加：
+
+```java
+@PostMapping("/end-impersonate")
+public String endImpersonate() {
+    String original = (String) session.getAttribute("originalAdminId");
+    if (original == null) {
+        return "redirect:/auth/login";
+    }
+    session.removeAttribute("originalAdminId");
+    session.setAttribute("loginGroupId", original);
+    return "redirect:/admin/dashboard";
+}
+```
+
+---
+
+## TASK-5: UserController 修正 {#task-5}
 
 **対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/UserController.java`
 
-**編集対象1: `editRiddle` メソッド（97行目付近）**
+### 5-A: `dashboard()` になりすまし中フラグを追加
+
+`dashboard()` メソッド内、`return "user/dashboard";` の直前に追加：
 
 ```java
-// 変更前
+model.addAttribute("isImpersonating", session.getAttribute("originalAdminId") != null);
+```
+
+### 5-B: `editRiddle()` にIDOR対策を追加
+
+**変更前:**
+```java
 @GetMapping("/riddles/edit/{id}")
 public String editRiddle(@PathVariable Integer id, Model model) {
     if (getLoginGroupId() == null)
@@ -164,8 +467,10 @@ public String editRiddle(@PathVariable Integer id, Model model) {
     model.addAttribute("riddle", riddle);
     return "user/riddle_edit";
 }
+```
 
-// 変更後
+**変更後:**
+```java
 @GetMapping("/riddles/edit/{id}")
 public String editRiddle(@PathVariable Integer id, Model model) {
     String groupId = getLoginGroupId();
@@ -181,16 +486,10 @@ public String editRiddle(@PathVariable Integer id, Model model) {
 }
 ```
 
-**編集対象2: `updateRiddle` メソッド（106行目付近）**
+### 5-C: `updateRiddle()` にIDOR対策を追加
 
+**変更前:**
 ```java
-// 変更前
-@PostMapping("/riddles/update")
-public String updateRiddle(@RequestParam Integer id, @RequestParam String question,
-        @RequestParam String answer, @RequestParam String nextMsg,
-        @RequestParam(required = false) String hintMsg,
-        @RequestParam(required = false) MultipartFile imageFile) throws IOException {
-
     if (getLoginGroupId() == null)
         return "redirect:/auth/login";
 
@@ -204,15 +503,10 @@ public String updateRiddle(@RequestParam Integer id, @RequestParam String questi
     eventAdminService.updateRiddle(id, question, answer, nextMsg, hintMsg, imageId);
 
     return "redirect:/user/riddles";
-}
+```
 
-// 変更後
-@PostMapping("/riddles/update")
-public String updateRiddle(@RequestParam Integer id, @RequestParam String question,
-        @RequestParam String answer, @RequestParam String nextMsg,
-        @RequestParam(required = false) String hintMsg,
-        @RequestParam(required = false) MultipartFile imageFile) throws IOException {
-
+**変更後:**
+```java
     String groupId = getLoginGroupId();
     if (groupId == null)
         return "redirect:/auth/login";
@@ -228,16 +522,17 @@ public String updateRiddle(@RequestParam Integer id, @RequestParam String questi
         eventAdminService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageId);
     } catch (SecurityException e) {
         return "redirect:/user/riddles";
+    } catch (IllegalArgumentException e) {
+        return "redirect:/user/riddles?error=invalidImage";
     }
 
     return "redirect:/user/riddles";
-}
 ```
 
-**編集対象3: `deleteRiddle` メソッド（131行目付近）**
+### 5-D: `deleteRiddle()` にIDOR対策を追加
 
+**変更前:**
 ```java
-// 変更前
 @PostMapping("/riddles/delete/{id}")
 public String deleteRiddle(@PathVariable Integer id) {
     if (getLoginGroupId() == null)
@@ -245,8 +540,10 @@ public String deleteRiddle(@PathVariable Integer id) {
     eventAdminService.deleteRiddle(id);
     return "redirect:/user/riddles";
 }
+```
 
-// 変更後
+**変更後:**
+```java
 @PostMapping("/riddles/delete/{id}")
 public String deleteRiddle(@PathVariable Integer id) {
     String groupId = getLoginGroupId();
@@ -261,432 +558,165 @@ public String deleteRiddle(@PathVariable Integer id) {
 }
 ```
 
----
+### 5-E: `addRiddle()` に画像バリデーションエラーハンドリングを追加
 
-## TASK-4: パスワードBCryptハッシュ化 {#task-4-password}
+`uploadImage()` と `registerRiddle()` の呼び出しを try-catch で囲む：
 
-### 4-A: `build.gradle` に Spring Security を追加
-
-**対象ファイル:** `build.gradle`
-
-`dependencies` ブロックに以下を追加：
-
-```groovy
-implementation 'org.springframework.boot:spring-boot-starter-security'
-implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+**変更前:**
+```java
+    Integer imageId = eventAdminService.uploadImage(imageFile);
+    eventAdminService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
+    return "redirect:/user/riddles";
 ```
 
-> Spring Boot 4.0はSpring Security 7.xを使用するが、Thymeleafのエクストラは
-> `springsecurity6` を指定する（ライブラリのバージョン番号であり、Security 7にも対応している）。
-
-### 4-B: `SecurityConfig.java` を新規作成
-
-**新規作成ファイル:** `src/main/java/com/gantaro/mysterybot/config/SecurityConfig.java`
-
+**変更後:**
 ```java
-package com.gantaro.mysterybot.config;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            // 認証はコントローラーのセッションチェックで行うため、Spring Securityの認証は無効化
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable())
-            // すべてのリクエストを許可（認証チェックは各コントローラーで実施）
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            // CSRF: /callback（LINE Webhook）のみ除外
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/callback")
-            )
-            // セッション固定攻撃対策（ログイン時に新しいセッションIDを発行）
-            .sessionManagement(session -> session
-                .sessionFixation().newSession()
-            );
-
-        return http.build();
+    try {
+        Integer imageId = eventAdminService.uploadImage(imageFile);
+        eventAdminService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
+    } catch (IllegalArgumentException e) {
+        return "redirect:/user/riddles?error=invalidImage";
     }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-}
-```
-
-### 4-C: `EventAdminService.java` でBCryptを使用
-
-**対象ファイル:** `src/main/java/com/gantaro/mysterybot/service/EventAdminService.java`
-
-**インポート追加：**
-```java
-import org.springframework.security.crypto.password.PasswordEncoder;
-```
-
-**フィールド追加（`@RequiredArgsConstructor` で自動注入）：**
-```java
-private final PasswordEncoder passwordEncoder;
-```
-
-**`login` メソッド（39行目付近）を修正：**
-```java
-// 変更前
-public boolean login(String groupId, String password) {
-    Optional<TeamGroup> group = teamGroupRepository.findByGroupId(groupId);
-    if (group.isEmpty())
-        return false;
-    String savedPass = group.get().getAdminPass();
-    return savedPass != null && savedPass.equals(password);
-}
-
-// 変更後
-public boolean login(String groupId, String password) {
-    Optional<TeamGroup> group = teamGroupRepository.findByGroupId(groupId);
-    if (group.isEmpty())
-        return false;
-    String savedPass = group.get().getAdminPass();
-    if (savedPass == null) return false;
-    return passwordEncoder.matches(password, savedPass);
-}
-```
-
-**`createEvent` メソッド（47行目付近）を修正：**
-```java
-// 変更前
-newGroup.setAdminPass(password);
-
-// 変更後
-newGroup.setAdminPass(passwordEncoder.encode(password));
-```
-
-### 4-D: 管理者ダッシュボードからパスワード表示を削除
-
-**対象ファイル:** `src/main/resources/templates/admin/dashboard.html`
-
-**変更前（49行目付近）：**
-```html
-<th>パスワード</th>
-```
-↓ この `<th>` を削除
-
-**変更前（61行目付近）：**
-```html
-<td>
-    <span class="badge bg-secondary font-monospace" th:text="${event.adminPass}"></span>
-</td>
-```
-↓ この `<td>` ブロック全体を削除
-
-### 4-E: 既存パスワードのマイグレーション
-
-既存のDBには平文パスワードが保存されている。
-以下のSQLをローカルDBおよび本番TiDBで手動実行すること（Codexのスコープ外・開発者が実行）：
-
-```sql
--- 既存の全パスワードをBCryptハッシュに更新する
--- 事前にJavaでBCrypt.encode(現在のパスワード)を実行してハッシュ値を生成し、
--- 各イベントのIDごとに UPDATE team_groups SET admin_pass = '[ハッシュ値]' WHERE group_id = '[ID]'; を実行すること。
--- または全ユーザーにパスワード再設定を案内する。
+    return "redirect:/user/riddles";
 ```
 
 ---
 
-## TASK-5: CSRF保護の有効化（フォームへのCSRFトークン埋め込み） {#task-5-csrf}
-
-TASK-4でSpring Securityを追加すると、Thymeleafの `th:action` を使用したフォームには
-自動的にCSRFトークンが埋め込まれる。
-
-**全HTMLテンプレートのフォームを `th:action` に変更する。**
-
-### 変更対象ファイルと変更内容
-
-#### `src/main/resources/templates/auth/register.html`（17行目）
-```html
-<!-- 変更前 -->
-<form action="/auth/register" method="post">
-
-<!-- 変更後 -->
-<form th:action="@{/auth/register}" method="post">
-```
-
-#### `src/main/resources/templates/auth/login.html`
-ログインフォームの `action` 属性を `th:action="@{/auth/login}"` に変更。
-
-#### `src/main/resources/templates/user/riddles.html`
-すべての `<form action="...">` を `<form th:action="@{...}">` に変更。
-
-#### `src/main/resources/templates/user/riddle_edit.html`
-同様にすべての `action` を `th:action` に変更。
-
-#### `src/main/resources/templates/user/dashboard.html`
-同様にすべての `action` を `th:action` に変更。
-
-#### `src/main/resources/templates/user/catalog.html`
-同様にすべての `action` を `th:action` に変更。
-
-#### `src/main/resources/templates/admin/dashboard.html`（71, 80, 92行目）
-すでに `th:action` を使用しているため変更不要（確認のみ）。
-
-#### `src/main/resources/templates/admin/master_riddle_edit.html`
-同様にすべての `action` を `th:action` に変更。
-
----
-
-## TASK-6: groupId予約語バリデーション {#task-6-groupid}
-
-### 6-A: `EventAdminService.createEvent` に予約語チェックを追加
-
-**対象ファイル:** `src/main/java/com/gantaro/mysterybot/service/EventAdminService.java`
-
-`createEvent` メソッドの先頭（重複チェックの前）に追加：
-
-```java
-private static final java.util.Set<String> RESERVED_GROUP_IDS =
-    java.util.Set.of("admin", "system", "root", "superadmin", "test");
-
-@Transactional
-public void createEvent(String groupId, String groupName, String password) {
-    // 予約語チェック
-    if (RESERVED_GROUP_IDS.contains(groupId.toLowerCase())) {
-        throw new IllegalArgumentException("そのイベントIDは使用できません");
-    }
-
-    // フォーマットチェック（半角英数字・ハイフン・アンダーバーのみ、3〜30文字）
-    if (!groupId.matches("^[a-zA-Z0-9_-]{3,30}$")) {
-        throw new IllegalArgumentException("イベントIDは半角英数字・ハイフン・アンダーバーのみ、3〜30文字で入力してください");
-    }
-
-    // 重複チェック（既存）
-    if (teamGroupRepository.findByGroupId(groupId).isPresent()) {
-        throw new IllegalArgumentException("そのイベントIDは既に使用されています");
-    }
-
-    TeamGroup newGroup = new TeamGroup();
-    newGroup.setGroupId(groupId);
-    newGroup.setGroupName(groupName);
-    newGroup.setAdminPass(passwordEncoder.encode(password));
-    newGroup.setIsRandomOrder(false);
-    teamGroupRepository.insert(newGroup);
-}
-```
-
-### 6-B: エラーメッセージを `AuthController` に反映
-
-**対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/AuthController.java`
-
-`register` メソッドのcatchブロックのエラーメッセージを修正：
-
-```java
-// 変更前
-} catch (Exception e) {
-    model.addAttribute("error", "登録失敗: IDが重複している可能性があります");
-    return "auth/register";
-}
-
-// 変更後
-} catch (IllegalArgumentException e) {
-    model.addAttribute("error", e.getMessage());
-    return "auth/register";
-} catch (Exception e) {
-    model.addAttribute("error", "登録に失敗しました。もう一度お試しください");
-    return "auth/register";
-}
-```
-
----
-
-## TASK-7: ファイルアップロードのMIME検証 {#task-7-upload}
-
-### 7-A: `EventAdminService.uploadImage` でマジックバイト検査を追加
-
-**対象ファイル:** `src/main/java/com/gantaro/mysterybot/service/EventAdminService.java`
-
-`uploadImage` メソッドの先頭にマジックバイト検査を追加：
-
-```java
-@Transactional
-public Integer uploadImage(MultipartFile file) throws IOException {
-    if (file == null || file.isEmpty())
-        return null;
-
-    byte[] originalData = file.getBytes();
-
-    // マジックバイトで実際のファイル形式を検証
-    if (!isAllowedImageBytes(originalData)) {
-        throw new IllegalArgumentException("画像ファイル（JPEG/PNG/GIF）のみアップロードできます");
-    }
-
-    // Content-Typeヘッダーは信頼せず、マジックバイトから判定した形式を使う
-    byte[] savedData;
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(originalData);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-        Thumbnails.of(bis).width(800).outputFormat("jpg")
-                .outputQuality(0.8).toOutputStream(bos);
-        savedData = bos.toByteArray();
-    } catch (Exception e) {
-        savedData = originalData;
-    }
-
-    RiddleImage img = new RiddleImage();
-    img.setData(savedData);
-    img.setMimeType("image/jpeg"); // 常にjpegとして保存（攻撃者のContent-Typeを使わない）
-    img.setUuid(UUID.randomUUID().toString());
-    riddleImageRepository.insert(img);
-
-    return img.getId();
-}
-
-// マジックバイト検査ヘルパー
-private boolean isAllowedImageBytes(byte[] data) {
-    if (data.length < 4) return false;
-
-    // JPEG: FF D8 FF
-    if (data[0] == (byte)0xFF && data[1] == (byte)0xD8 && data[2] == (byte)0xFF)
-        return true;
-
-    // PNG: 89 50 4E 47
-    if (data[0] == (byte)0x89 && data[1] == (byte)0x50
-            && data[2] == (byte)0x4E && data[3] == (byte)0x47)
-        return true;
-
-    // GIF: 47 49 46 38
-    if (data[0] == (byte)0x47 && data[1] == (byte)0x49
-            && data[2] == (byte)0x46 && data[3] == (byte)0x38)
-        return true;
-
-    return false;
-}
-```
-
-### 7-B: `ImageController` でContent-Typeを固定
+## TASK-6: ImageController 修正 {#task-6}
 
 **対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/ImageController.java`
 
-画像を返すエンドポイントで、DBに保存されたMIMEタイプをそのまま使わず、
-`image/jpeg` に固定（または `image/png`, `image/gif` を許可リストから選択）：
+Content-TypeをDBから読まず、`IMAGE_JPEG` 固定に変更（Stored XSS防止）：
 
-現在の実装を確認し、`ResponseEntity` を返すメソッドで：
+**変更前:**
 ```java
-// 変更前（DBのmimeTypeをそのまま使用している箇所）
-.contentType(MediaType.parseMediaType(image.getMimeType()))
+return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(riddleImage.get().getMimeType()))
+        .body(riddleImage.get().getData());
+```
 
-// 変更後（常にJPEGとして配信）
-.contentType(MediaType.IMAGE_JPEG)
+**変更後:**
+```java
+return ResponseEntity.ok()
+        .contentType(MediaType.IMAGE_JPEG)
+        .body(riddleImage.get().getData());
 ```
 
 ---
 
-## TASK-8: 管理者なりすまし設計修正 {#task-8-impersonate}
+## TASK-7: HTMLテンプレート修正 {#task-7}
 
-### 8-A: `AdminController` でなりすまし前のadminセッションを保持
+### 7-A: `auth/login.html`
 
-**対象ファイル:** `src/main/java/com/gantaro/mysterybot/controller/AdminController.java`
-
-**`impersonate` メソッドを修正（46行目付近）：**
-
-```java
-// 変更前
-@PostMapping("/impersonate/{groupId}")
-public String impersonate(@PathVariable String groupId) {
-    if (!"admin".equals(getLoginGroupId())) {
-        return "redirect:/auth/login";
-    }
-    session.setAttribute("loginGroupId", groupId);
-    return "redirect:/user/dashboard";
-}
-
-// 変更後
-@PostMapping("/impersonate/{groupId}")
-public String impersonate(@PathVariable String groupId) {
-    if (!"admin".equals(getLoginGroupId())) {
-        return "redirect:/auth/login";
-    }
-    // なりすまし前の admin セッションを別キーで保持
-    session.setAttribute("originalAdminId", "admin");
-    session.setAttribute("loginGroupId", groupId);
-    return "redirect:/user/dashboard";
-}
-```
-
-**なりすまし解除エンドポイントを追加（`AdminController` 末尾に追記）：**
-
-```java
-// S8. なりすまし解除
-@PostMapping("/end-impersonate")
-public String endImpersonate() {
-    String originalId = (String) session.getAttribute("originalAdminId");
-    if (originalId == null) {
-        return "redirect:/auth/login";
-    }
-    session.removeAttribute("originalAdminId");
-    session.setAttribute("loginGroupId", originalId);
-    return "redirect:/admin/dashboard";
-}
-```
-
-### 8-B: `UserController.dashboard` になりすまし解除ボタンを表示
-
-**対象ファイル:** `src/main/resources/templates/user/dashboard.html`
-
-`UserController.dashboard` メソッドで `originalAdminId` をモデルに追加するため、
-コントローラーも修正：
-
-**`UserController.java` の `dashboard` メソッドを修正：**
-```java
-@GetMapping("/dashboard")
-public String dashboard(Model model, HttpSession session) {
-    String groupId = getLoginGroupId();
-    if (groupId == null)
-        return "redirect:/auth/login";
-
-    TeamGroup group = eventAdminService.getEvent(groupId);
-    model.addAttribute("group", group);
-    model.addAttribute("botFriendUrl", botFriendUrl);
-
-    // なりすまし中かどうかをテンプレートに伝える
-    boolean isImpersonating = session.getAttribute("originalAdminId") != null;
-    model.addAttribute("isImpersonating", isImpersonating);
-
-    return "user/dashboard";
-}
-```
-
-> Note: `HttpSession session` はコンストラクタインジェクション済みのフィールドを使うか、
-> メソッド引数で受け取るかは既存コードに合わせること。
-
-**`user/dashboard.html` のナビバー付近に以下を追加：**
+**変更前:**
 ```html
-<!-- なりすまし中の場合のみ表示 -->
-<div th:if="${isImpersonating}" class="alert alert-warning text-center mb-0 py-2" role="alert">
-    <strong>なりすましモード中</strong>
+<form action="/auth/login" method="post">
+```
+**変更後:**
+```html
+<form th:action="@{/auth/login}" method="post">
+```
+
+### 7-B: `auth/register.html`
+
+**変更前:**
+```html
+<form action="/auth/register" method="post">
+```
+**変更後:**
+```html
+<form th:action="@{/auth/register}" method="post">
+```
+
+### 7-C: `user/dashboard.html`
+
+変更1 — ログアウトリンクをPOSTフォームに変更：
+
+**変更前:**
+```html
+<a href="/auth/logout" class="btn btn-outline-danger btn-sm">ログアウト</a>
+```
+**変更後:**
+```html
+<form th:action="@{/auth/logout}" method="post" class="d-inline">
+    <button type="submit" class="btn btn-outline-danger btn-sm">ログアウト</button>
+</form>
+```
+
+変更2 — イベント開始フォームのth:action化：
+
+**変更前:**
+```html
+<form action="/user/start-event" method="post" onsubmit="return confirm(
+```
+**変更後:**
+```html
+<form th:action="@{/user/start-event}" method="post" onsubmit="return confirm(
+```
+
+変更3 — なりすまし警告バナーを `<body>` 直後に挿入：
+
+```html
+<div th:if="${isImpersonating}" class="alert alert-warning m-0 rounded-0 text-center" role="alert">
+    <strong>管理者モードで閲覧中です。</strong>
     <form th:action="@{/admin/end-impersonate}" method="post" class="d-inline ms-3">
-        <button type="submit" class="btn btn-warning btn-sm">管理者画面に戻る</button>
+        <button type="submit" class="btn btn-sm btn-warning">管理者画面に戻る</button>
     </form>
 </div>
 ```
 
+### 7-D: `user/riddle_edit.html`
+
+**変更前:**
+```html
+<form action="/user/riddles/update" method="post" enctype="multipart/form-data">
+```
+**変更後:**
+```html
+<form th:action="@{/user/riddles/update}" method="post" enctype="multipart/form-data">
+```
+
+### 7-E: `user/riddles.html`
+
+変更1:
+```html
+<!-- 変更前 -->
+<form action="/user/riddles/settings" method="post" class="d-flex align-items-center">
+<!-- 変更後 -->
+<form th:action="@{/user/riddles/settings}" method="post" class="d-flex align-items-center">
+```
+
+変更2:
+```html
+<!-- 変更前 -->
+<form action="/user/riddles/add" method="post" enctype="multipart/form-data">
+<!-- 変更後 -->
+<form th:action="@{/user/riddles/add}" method="post" enctype="multipart/form-data">
+```
+
 ---
 
-## 実装後の確認事項
+## 完了確認チェックリスト
 
-- [ ] `./gradlew build` がエラーなく通ること
-- [ ] `./gradlew bootRun` でアプリが起動すること
-- [ ] 以下の動作確認：
-  - [ ] 新規イベント登録 → ログイン → ダッシュボード表示
-  - [ ] `groupId=admin` での登録が弾かれること
-  - [ ] 別テナントの謎問題IDでアクセスすると `/user/riddles` にリダイレクトされること
-  - [ ] `/test/riddles/demo` が404またはエラーになること
-  - [ ] 画像以外のファイルアップロードが拒否されること
-  - [ ] CSRFトークンなしのPOSTが拒否されること（`/callback` は除く）
-  - [ ] 管理者なりすまし後に「管理者画面に戻る」ボタンで戻れること
+実装後、以下を確認すること：
+
+```bash
+# 1. コンパイルエラーがないこと
+./gradlew compileJava
+
+# 2. TestControllerが存在しないこと（エラーになればOK）
+ls src/main/java/com/gantaro/mysterybot/controller/TestController.java
+
+# 3. BCryptが使われていること
+grep "passwordEncoder" src/main/java/com/gantaro/mysterybot/service/EventAdminService.java
+
+# 4. IDOR対策が入っていること
+grep "getRiddleOwnedBy" src/main/java/com/gantaro/mysterybot/service/EventAdminService.java
+grep "getRiddleOwnedBy" src/main/java/com/gantaro/mysterybot/controller/UserController.java
+
+# 5. logoutがPOSTになっていること
+grep "PostMapping.*logout" src/main/java/com/gantaro/mysterybot/controller/AuthController.java
+
+# 6. th:actionが全フォームにあること（action= のみが残っていないこと）
+grep -rn 'form action=' src/main/resources/templates/
+```
