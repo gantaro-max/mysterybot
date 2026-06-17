@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import com.gantaro.mysterybot.entity.MasterRiddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
+import com.gantaro.mysterybot.service.CatalogService;
 import com.gantaro.mysterybot.service.EventAdminService;
+import com.gantaro.mysterybot.service.RiddleService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 public class AdminController {
 
     private final EventAdminService eventAdminService;
+    private final CatalogService catalogService;
+    private final RiddleService riddleService;
     private final HttpSession session;
 
     private String getLoginGroupId() {
@@ -91,7 +95,7 @@ public class AdminController {
         if (!"admin".equals(getLoginGroupId()))
             return "redirect:/auth/login";
 
-        model.addAttribute("catalog", eventAdminService.getCatalog());
+        model.addAttribute("catalog", catalogService.getCatalog());
         // 管理者権限ON（これで追加フォームが表示されます）
         model.addAttribute("isSuperAdmin", true);
         // 「戻る」ボタンのリンク先
@@ -112,8 +116,8 @@ public class AdminController {
             return "redirect:/auth/login";
 
         try {
-            Integer imgId = eventAdminService.uploadImage(imageFile);
-            eventAdminService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId,
+            Integer imgId = riddleService.uploadImage(imageFile);
+            catalogService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId,
                     category);
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/catalog?error=invalidImage";
@@ -140,7 +144,7 @@ public class AdminController {
         if (!"admin".equals(getLoginGroupId())) {
             return "redirect:/auth/login";
         }
-        eventAdminService.deleteMasterRiddle(id);
+        catalogService.deleteMasterRiddle(id);
         return "redirect:/admin/catalog";
     }
 
@@ -151,7 +155,7 @@ public class AdminController {
             return "redirect:/auth/login";
         }
 
-        MasterRiddle riddle = eventAdminService.getMasterRiddle(id);
+        MasterRiddle riddle = catalogService.getMasterRiddle(id);
         model.addAttribute("riddle", riddle);
         return "admin/master_riddle_edit";
     }
@@ -168,8 +172,8 @@ public class AdminController {
         }
 
         try {
-            Integer imgId = eventAdminService.uploadImage(imageFile);
-            eventAdminService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
+            Integer imgId = riddleService.uploadImage(imageFile);
+            catalogService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
                     category);
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/catalog?error=invalidImage";

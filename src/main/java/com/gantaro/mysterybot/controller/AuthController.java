@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import com.gantaro.mysterybot.service.EventAdminService;
+import com.gantaro.mysterybot.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final EventAdminService eventAdminService;
+    private final AuthService authService;
     private final HttpSession session;
 
     // ログイン画面
@@ -29,7 +29,7 @@ public class AuthController {
     @PostMapping("/login")
     public String login(@RequestParam String groupId, @RequestParam String password, Model model,
             HttpServletRequest request) {
-        if (eventAdminService.login(groupId, password)) {
+        if (authService.login(groupId, password)) {
             request.changeSessionId();
             session.removeAttribute("originalAdminId");
             session.setAttribute("loginGroupId", groupId);
@@ -63,7 +63,7 @@ public class AuthController {
     public String register(@RequestParam String groupId, @RequestParam String groupName,
             @RequestParam String password, Model model, HttpServletRequest request) {
         try {
-            eventAdminService.createEvent(groupId, groupName, password);
+            authService.createEvent(groupId, groupName, password);
             // 登録成功したらそのままログイン
             request.changeSessionId();
             session.removeAttribute("originalAdminId");

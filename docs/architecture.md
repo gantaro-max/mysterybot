@@ -40,7 +40,10 @@ URL プレフィックスでロールを分離する。
 
 | クラス | 責務 |
 |:--|:--|
-| `EventAdminService` | Web 管理画面のビジネスロジック（ログイン・CRUD・画像アップロード・IDOR チェック） |
+| `AuthService` | ログイン・BCrypt認証・イベント登録（予約語チェック・パスワードハッシュ化） |
+| `RiddleService` | リドルCRUD・画像アップロード（マジックバイト検証・リサイズ）・IDOR チェック |
+| `CatalogService` | マスター問題CRUD・カタログからのインポート（`RiddleService` に委譲） |
+| `EventAdminService` | イベント取得・ランキング・開始/設定変更・削除・時間リセット |
 | `GameService` | LINE Bot のゲーム進行ロジック（参加・回答判定・ヒント・リセット） |
 
 ### 認証方式
@@ -56,7 +59,8 @@ URL プレフィックスでロールを分離する。
 ```
 src/main/java/com/gantaro/mysterybot/
 ├── config/
-│   └── SecurityConfig.java         # Spring Security 設定
+│   ├── SecurityConfig.java                                  # Spring Security 設定
+│   └── LineBotAutoConfigurationEnvironmentPostProcessor.java # LINE SDK 起動制御
 ├── controller/
 │   ├── AdminController.java        # スーパーAdmin 用
 │   ├── AuthController.java         # 認証
@@ -64,8 +68,11 @@ src/main/java/com/gantaro/mysterybot/
 │   ├── LineWebhookController.java  # LINE Webhook
 │   └── UserController.java         # イベント主催者用
 ├── service/
-│   ├── EventAdminService.java      # Web 管理ロジック
-│   └── GameService.java            # ゲーム進行ロジック
+│   ├── AuthService.java            # ログイン・イベント登録
+│   ├── CatalogService.java         # マスター問題CRUD・インポート
+│   ├── EventAdminService.java      # イベント管理・ランキング
+│   ├── GameService.java            # ゲーム進行ロジック
+│   └── RiddleService.java          # リドルCRUD・画像アップロード
 ├── entity/                         # DB エンティティ
 ├── repository/                     # MyBatis リポジトリ
 ├── dto/
@@ -132,6 +139,9 @@ graph TD
     end
 
     subgraph Services
+        AS[AuthService]
+        RS[RiddleService]
+        CS[CatalogService]
         EAS[EventAdminService]
         GS[GameService]
     end
@@ -149,10 +159,19 @@ graph TD
 
     LWC --> FMH
     LWC --> GS
+    AuC --> AS
+    UC --> RS
+    UC --> CS
     UC --> EAS
+    AC --> CS
+    AC --> RS
     AC --> EAS
+    CS --> RS
 
     GS --> DB
+    AS --> DB
+    RS --> DB
+    CS --> DB
     EAS --> DB
 ```
 

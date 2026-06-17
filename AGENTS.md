@@ -56,7 +56,7 @@ Codex はこのプロジェクトにおいて **コーダー・テスター・�
 ## コーディング規約
 
 ### コントローラー
-- リドル操作は必ず `EventAdminService.getRiddleOwnedBy(id, groupId)` で所有権を確認する
+- リドル操作は必ず `RiddleService.getRiddleOwnedBy(id, groupId)` で所有権を確認する
 - 新しいエンドポイントを追加する場合、`docs/api.md` の設計と一致させる
 
 ### フォーム

@@ -14,7 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.gantaro.mysterybot.entity.Player;
 import com.gantaro.mysterybot.entity.Riddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
+import com.gantaro.mysterybot.service.CatalogService;
 import com.gantaro.mysterybot.service.EventAdminService;
+import com.gantaro.mysterybot.service.RiddleService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
     private final EventAdminService eventAdminService;
+    private final RiddleService riddleService;
+    private final CatalogService catalogService;
     private final HttpSession session;
 
     @Value("${line.bot.friend-url}")
@@ -69,7 +73,7 @@ public class UserController {
             return "redirect:/auth/login";
 
         TeamGroup group = eventAdminService.getEvent(groupId);
-        List<Riddle> riddles = eventAdminService.getRiddles(groupId);
+        List<Riddle> riddles = riddleService.getRiddles(groupId);
 
         model.addAttribute("group", group);
         model.addAttribute("riddles", riddles);
@@ -88,10 +92,10 @@ public class UserController {
 
         try {
             // 画像をアップロードしてIDを取得（なければnull）
-            Integer imageId = eventAdminService.uploadImage(imageFile);
+            Integer imageId = riddleService.uploadImage(imageFile);
 
             // サービスへ全データを渡す
-            eventAdminService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
+            riddleService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
         } catch (IllegalArgumentException e) {
             return "redirect:/user/riddles?error=invalidImage";
         }
@@ -105,7 +109,7 @@ public class UserController {
         if (groupId == null)
             return "redirect:/auth/login";
         try {
-            Riddle riddle = eventAdminService.getRiddleOwnedBy(id, groupId);
+            Riddle riddle = riddleService.getRiddleOwnedBy(id, groupId);
             model.addAttribute("riddle", riddle);
             return "user/riddle_edit";
         } catch (SecurityException e) {
@@ -126,16 +130,16 @@ public class UserController {
 
         try {
             // 1. まず現在の情報を取得（古い画像IDを知るため）
-            Riddle oldRiddle = eventAdminService.getRiddleOwnedBy(id, groupId);
+            Riddle oldRiddle = riddleService.getRiddleOwnedBy(id, groupId);
             Integer imageId = oldRiddle.getImageId();
 
             // 2. 新しい画像がアップロードされていれば保存してIDを更新
             if (imageFile != null && !imageFile.isEmpty()) {
-                imageId = eventAdminService.uploadImage(imageFile);
+                imageId = riddleService.uploadImage(imageFile);
             }
 
             // 3. 更新実行
-            eventAdminService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageId);
+            riddleService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageId);
         } catch (SecurityException e) {
             return "redirect:/user/riddles";
         } catch (IllegalArgumentException e) {
@@ -152,7 +156,7 @@ public class UserController {
         if (groupId == null)
             return "redirect:/auth/login";
         try {
-            eventAdminService.deleteRiddle(id, groupId);
+            riddleService.deleteRiddle(id, groupId);
         } catch (SecurityException e) {
             return "redirect:/user/riddles";
         }
@@ -192,7 +196,7 @@ public class UserController {
             return "redirect:/auth/login";
 
         // カタログデータを取得
-        model.addAttribute("catalog", eventAdminService.getCatalog());
+        model.addAttribute("catalog", catalogService.getCatalog());
         // 主催者は管理者ではないのでfalse
         model.addAttribute("isSuperAdmin", false);
         // 「戻る」ボタンのリンク先
@@ -208,7 +212,7 @@ public class UserController {
         if (groupId == null)
             return "redirect:/auth/login";
 
-        eventAdminService.importFromCatalog(groupId, id);
+        catalogService.importFromCatalog(groupId, id);
         return "redirect:/user/riddles";
     }
 

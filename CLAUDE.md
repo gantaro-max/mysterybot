@@ -171,7 +171,10 @@ docker-compose up -d   # ローカルDB起動
 - `groupId == "admin"` でスーパーAdmin 権限
 
 ### サービス層
-- `EventAdminService`: Web 管理画面のビジネスロジック（ログイン・CRUD・IDOR チェック・画像アップロード）
+- `AuthService`: ログイン・BCrypt認証・イベント登録
+- `RiddleService`: リドルCRUD・画像アップロード（マジックバイト検証）・IDOR チェック
+- `CatalogService`: マスター問題CRUD・カタログからのインポート
+- `EventAdminService`: イベント取得・ランキング・開始/設定変更・削除
 - `GameService`: LINE Bot のゲーム進行ロジック（参加・回答判定・ヒント・リセット）
 
 ---
