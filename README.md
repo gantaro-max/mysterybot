@@ -48,19 +48,17 @@ git clone https://github.com/gantaro-max/mysterybot.git
 cd mysterybot
 ```
 
-**2. 設定ファイルを作成**
+**2. 設定の確認**
 
-`src/main/resources/application.properties.example` をコピーして編集します。
+`src/main/resources/application.properties` がリポジトリに含まれています。
+ローカルのDockerDB（ポート3307）はデフォルト設定で動作します。
+
+LINE Bot をローカルでテストする場合のみ、環境変数を設定してください：
+
 ```bash
-cp src/main/resources/application.properties.example src/main/resources/application.properties
-```
-
-`application.properties` に以下を設定します（このファイルはgitignore済み）：
-```properties
-line.bot.channel-token=YOUR_CHANNEL_TOKEN
-line.bot.channel-secret=YOUR_CHANNEL_SECRET
-line.bot.friend-url=https://lin.ee/xxxxxxx
-mysterybot.app-url=https://xxxx.ngrok-free.app  # ローカル開発時はngrokのURL
+export LINE_BOT_CHANNEL_TOKEN=your_token
+export LINE_BOT_CHANNEL_SECRET=your_secret
+export MYSTERYBOT_APP_URL=https://xxxx.ngrok-free.app
 ```
 
 **3. ローカルDBを起動**
@@ -79,7 +77,7 @@ docker-compose up -d
 ```bash
 ngrok http 8080
 # 出力されたHTTPS URLをLINE DevelopersコンソールのWebhook URLに設定
-# application.propertiesのmysterybot.app-urlも同じURLに変更
+# MYSTERYBOT_APP_URLにも同じURLを設定
 ```
 
 ---
@@ -125,8 +123,7 @@ src/main/java/com/gantaro/mysterybot/
     └── FlexMessageHelper.java      # LINEメッセージ生成
 
 src/main/resources/
-├── application.properties          # 設定（gitignore済み・シークレット含む）
-├── application.properties.example  # 設定テンプレート（コミット済み）
+├── application.properties          # 設定（環境変数で本番値を上書き）
 ├── schema.sql                      # DDL
 ├── mappers/                        # MyBatis XMLマッパー
 └── templates/                      # Thymeleaf HTMLテンプレート
@@ -141,8 +138,12 @@ src/main/resources/
 
 | ファイル | 内容 |
 |:--|:--|
-| [DESIGN.md](DESIGN.md) | アーキテクチャ・DB設計・エンドポイント設計 |
-| [docs/OPERATOR_MANUAL.md](docs/OPERATOR_MANUAL.md) | イベント主催者向けマニュアル |
+| [docs/requirements.md](docs/requirements.md) | 要件定義 |
+| [docs/architecture.md](docs/architecture.md) | アーキテクチャ・クラス設計・ゲームフロー |
+| [docs/database.md](docs/database.md) | テーブル設計 |
+| [docs/api.md](docs/api.md) | エンドポイント設計・Bot コマンド一覧 |
+| [docs/operator-guide.md](docs/operator-guide.md) | イベント主催者向けマニュアル |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 開発者向けガイドライン・環境構築 |
+| [SECURITY.md](SECURITY.md) | セキュリティポリシー・対応チェックリスト |
 | [CHANGELOG.md](CHANGELOG.md) | バージョン履歴 |
-| [SECURITY_ISSUES.md](SECURITY_ISSUES.md) | セキュリティ対応チェックリスト |
-| [AGENTS.md](AGENTS.md) | AIエージェント向け開発ガイド |
+| [AGENTS.md](AGENTS.md) | AI エージェント向けガイド |
