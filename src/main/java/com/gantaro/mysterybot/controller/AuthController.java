@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.gantaro.mysterybot.service.EventAdminService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
@@ -26,8 +27,11 @@ public class AuthController {
 
     // ログイン処理
     @PostMapping("/login")
-    public String login(@RequestParam String groupId, @RequestParam String password, Model model) {
+    public String login(@RequestParam String groupId, @RequestParam String password, Model model,
+            HttpServletRequest request) {
         if (eventAdminService.login(groupId, password)) {
+            request.changeSessionId();
+            session.removeAttribute("originalAdminId");
             session.setAttribute("loginGroupId", groupId);
 
             if ("admin".equals(groupId)) {
@@ -42,7 +46,7 @@ public class AuthController {
     }
 
     // ログアウト処理
-    @GetMapping("/logout")
+    @PostMapping("/logout")
     public String logout() {
         session.invalidate();
         return "redirect:/auth/login";
@@ -57,14 +61,19 @@ public class AuthController {
     // 新規登録処理
     @PostMapping("/register")
     public String register(@RequestParam String groupId, @RequestParam String groupName,
-            @RequestParam String password, Model model) {
+            @RequestParam String password, Model model, HttpServletRequest request) {
         try {
             eventAdminService.createEvent(groupId, groupName, password);
             // 登録成功したらそのままログイン
+            request.changeSessionId();
+            session.removeAttribute("originalAdminId");
             session.setAttribute("loginGroupId", groupId);
             return "redirect:/user/dashboard";
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+            return "auth/register";
         } catch (Exception e) {
-            model.addAttribute("error", "登録失敗: IDが重複している可能性があります");
+            model.addAttribute("error", "登録に失敗しました。もう一度お試しください");
             return "auth/register";
         }
     }

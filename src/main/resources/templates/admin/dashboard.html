@@ -20,7 +20,9 @@
             </span>
             <div class="d-flex align-items-center">
                 <span class="text-white-50 me-3">アプリケーション管理者</span>
-                <a href="/auth/logout" class="btn btn-outline-light btn-sm">ログアウト</a>
+                <form th:action="@{/auth/logout}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+                </form>
             </div>
         </div>
     </nav>
@@ -47,7 +49,6 @@
                         <tr>
                             <th class="ps-4">イベントID</th>
                             <th>イベント名</th>
-                            <th>パスワード</th>
                             <th>作成日時</th>
                             <th>状態</th>
                             <th class="text-end pe-4">アクション</th>
@@ -57,9 +58,6 @@
                         <tr th:each="event : ${events}" th:classappend="${event.groupId == 'admin'} ? 'table-warning'">
                             <td class="ps-4 fw-bold font-monospace" th:text="${event.groupId}"></td>
                             <td th:text="${event.groupName}"></td>
-                            <td>
-                                <span class="badge bg-secondary font-monospace" th:text="${event.adminPass}"></span>
-                            </td>
                             <td class="small text-muted" th:text="${#temporals.format(event.createdAt, 'yyyy/MM/dd HH:mm')}"></td>
                             <td>
                                 <span th:if="${event.startedAt != null}" class="badge bg-success">開催中</span>

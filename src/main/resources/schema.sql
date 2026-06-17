@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS master_riddles (
 -- ==========================================
 
 -- デモ用グループを作る (ランダムOFFで作成)
-INSERT INTO team_groups (group_id, group_name, admin_pass, is_random_order) VALUES ('demo', 'デモ用謎解きイベント', '1234', FALSE);
+INSERT INTO team_groups (group_id, group_name, admin_pass, is_random_order) VALUES ('demo', 'デモ用謎解きイベント', '$2a$10$gbXKvwLphM060VkpxO/YieVwoi9Ro8zLSllpKNVgnS8PByR7o2Qf6', FALSE);
 
 -- デモグループ用の謎を3問登録する
 INSERT INTO riddles (group_id, stage_no, question, answer, next_msg) 

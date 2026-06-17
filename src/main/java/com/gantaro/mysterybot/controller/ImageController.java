@@ -23,7 +23,7 @@ public class ImageController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(riddleImage.get().getMimeType()))
+                .contentType(MediaType.IMAGE_JPEG)
                 .body(riddleImage.get().getData());
     }
 

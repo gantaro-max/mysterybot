@@ -49,10 +49,22 @@ public class AdminController {
             return "redirect:/auth/login";
         }
 
-        // セッションを該当グループIDで上書き（＝なりすましログイン完了）
+        eventAdminService.getEvent(groupId);
+        session.setAttribute("originalAdminId", "admin");
         session.setAttribute("loginGroupId", groupId);
 
         return "redirect:/user/dashboard";
+    }
+
+    @PostMapping("/end-impersonate")
+    public String endImpersonate() {
+        String original = (String) session.getAttribute("originalAdminId");
+        if (original == null) {
+            return "redirect:/auth/login";
+        }
+        session.removeAttribute("originalAdminId");
+        session.setAttribute("loginGroupId", original);
+        return "redirect:/admin/dashboard";
     }
 
     // S3. イベント強制削除
@@ -99,8 +111,13 @@ public class AdminController {
         if (!"admin".equals(getLoginGroupId()))
             return "redirect:/auth/login";
 
-        Integer imgId = eventAdminService.uploadImage(imageFile);
-        eventAdminService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId, category);
+        try {
+            Integer imgId = eventAdminService.uploadImage(imageFile);
+            eventAdminService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId,
+                    category);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/admin/catalog?error=invalidImage";
+        }
 
         return "redirect:/admin/catalog";
     }
@@ -150,9 +167,13 @@ public class AdminController {
             return "redirect:/auth/login";
         }
 
-        Integer imgId = eventAdminService.uploadImage(imageFile);
-        eventAdminService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
-                category);
+        try {
+            Integer imgId = eventAdminService.uploadImage(imageFile);
+            eventAdminService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
+                    category);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/admin/catalog?error=invalidImage";
+        }
 
         return "redirect:/admin/catalog";
     }

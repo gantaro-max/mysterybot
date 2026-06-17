@@ -35,6 +35,12 @@
         WHERE group_id = #{groupId}
     </update>
 
+    <update id="updateAdminPass">
+        UPDATE team_groups
+        SET admin_pass = #{adminPass}
+        WHERE group_id = #{groupId}
+    </update>
+
     <delete id="delete">
         DELETE FROM team_groups WHERE group_id = #{groupId}
     </delete>

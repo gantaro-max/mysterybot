@@ -20,6 +20,8 @@ public interface TeamGroupRepository {
 
     void updateStartedAt(@Param("groupId") String groupId, @Param("startedAt") Timestamp startedAt);
 
+    void updateAdminPass(@Param("groupId") String groupId, @Param("adminPass") String adminPass);
+
     void delete(@Param("groupId") String groupId);
 
 }

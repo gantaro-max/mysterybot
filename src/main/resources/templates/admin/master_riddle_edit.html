@@ -15,7 +15,7 @@
 
     <div class="card shadow-sm border-danger">
         <div class="card-body">
-            <form action="/admin/catalog/update" method="post" enctype="multipart/form-data">
+            <form th:action="@{/admin/catalog/update}" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="id" th:value="${riddle.id}">
                 
                 <div class="mb-3">

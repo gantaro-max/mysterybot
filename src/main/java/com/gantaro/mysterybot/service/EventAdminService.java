@@ -3,10 +3,14 @@ package com.gantaro.mysterybot.service;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import javax.imageio.ImageIO;
 import java.util.UUID;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,25 +38,48 @@ public class EventAdminService {
     private final MasterRiddleRepository masterRiddleRepository;
     private final RiddleImageRepository riddleImageRepository;
     private final SolvedHistoryRepository solvedHistoryRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private static final Set<String> RESERVED_GROUP_IDS =
+            Set.of("admin", "system", "root", "superadmin", "test");
+    private static final long MAX_IMAGE_BYTES = 10L * 1024L * 1024L;
+    private static final long MAX_IMAGE_PIXELS = 20_000_000L;
+    private static final int MAX_IMAGE_DIMENSION = 10_000;
 
     // ▼▼▼ ログイン・イベント作成 ▼▼▼
+    @Transactional
     public boolean login(String groupId, String password) {
         Optional<TeamGroup> group = teamGroupRepository.findByGroupId(groupId);
         if (group.isEmpty())
             return false;
         String savedPass = group.get().getAdminPass();
-        return savedPass != null && savedPass.equals(password);
+        if (savedPass == null)
+            return false;
+        if (isBCryptHash(savedPass)) {
+            return passwordEncoder.matches(password, savedPass);
+        }
+        if (!savedPass.equals(password)) {
+            return false;
+        }
+        teamGroupRepository.updateAdminPass(groupId, passwordEncoder.encode(password));
+        return true;
     }
 
     @Transactional
     public void createEvent(String groupId, String groupName, String password) {
+        if (RESERVED_GROUP_IDS.contains(groupId.toLowerCase())) {
+            throw new IllegalArgumentException("そのイベントIDは使用できません");
+        }
+        if (!groupId.matches("^[a-zA-Z0-9_-]{3,30}$")) {
+            throw new IllegalArgumentException("イベントIDは半角英数字・ハイフン・アンダーバーのみ、3〜30文字で入力してください");
+        }
         if (teamGroupRepository.findByGroupId(groupId).isPresent()) {
             throw new IllegalArgumentException("そのイベントIDは既に使用されています");
         }
         TeamGroup newGroup = new TeamGroup();
         newGroup.setGroupId(groupId);
         newGroup.setGroupName(groupName);
-        newGroup.setAdminPass(password);
+        newGroup.setAdminPass(passwordEncoder.encode(password));
         newGroup.setIsRandomOrder(false);
         teamGroupRepository.insert(newGroup);
     }
@@ -76,6 +103,14 @@ public class EventAdminService {
                 .orElseThrow(() -> new IllegalArgumentException("謎が見つかりません:ID" + id));
     }
 
+    public Riddle getRiddleOwnedBy(Integer id, String groupId) {
+        Riddle riddle = getRiddle(id);
+        if (!groupId.equals(riddle.getGroupId())) {
+            throw new SecurityException("この謎問題へのアクセス権がありません");
+        }
+        return riddle;
+    }
+
     // ▼▼▼ 更新・削除系 ▼▼▼
 
     // 謎の登録 (Controllerと引数を合わせました)
@@ -96,9 +131,9 @@ public class EventAdminService {
 
     // 謎の更新（画像とヒントに対応）
     @Transactional
-    public void updateRiddle(Integer id, String question, String answer, String nextMsg,
+    public void updateRiddle(Integer id, String groupId, String question, String answer, String nextMsg,
             String hintMsg, Integer imageId) {
-        Riddle resultRiddle = getRiddle(id);
+        Riddle resultRiddle = getRiddleOwnedBy(id, groupId);
         resultRiddle.setQuestion(question);
         resultRiddle.setAnswer(answer);
         resultRiddle.setNextMsg(nextMsg);
@@ -114,7 +149,9 @@ public class EventAdminService {
 
     // 謎の削除
     @Transactional
-    public void deleteRiddle(Integer id) {
+    public void deleteRiddle(Integer id, String groupId) {
+        getRiddleOwnedBy(id, groupId);
+
         // 1. まず、この問題に関連する「回答履歴」を削除する
         solvedHistoryRepository.deleteByRiddleId(id);
 
@@ -142,45 +179,65 @@ public class EventAdminService {
     public Integer uploadImage(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty())
             return null;
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            throw new IllegalArgumentException("画像ファイルは10MB以下にしてください");
+        }
 
-        // 1. 元の画像データを取得
         byte[] originalData = file.getBytes();
-        String contentType = file.getContentType();
+        if (!isAllowedImageBytes(originalData)) {
+            throw new IllegalArgumentException("画像ファイル（JPEG/PNG/GIF）のみアップロードできます");
+        }
 
-        // 2. 画像データ格納用
         byte[] savedData;
-
-        // 画像(jpg, png)の場合のみリサイズ処理を行う
-        if (contentType != null && contentType.startsWith("image/")) {
-            try (ByteArrayInputStream bis = new ByteArrayInputStream(originalData);
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-
-                // 幅800pxに合わせて縮小（高さは自動）、画質は80%に圧縮
-                Thumbnails.of(bis).width(800).outputFormat("jpg") // 強制的にjpgにして容量削減（透過PNGを使いたい場合は外す）
-                        .outputQuality(0.8).toOutputStream(bos);
-
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(originalData)) {
+            BufferedImage image = ImageIO.read(bis);
+            validateImageDimensions(image);
+            try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                Thumbnails.of(image).width(800).outputFormat("jpg")
+                    .outputQuality(0.8).toOutputStream(bos);
                 savedData = bos.toByteArray();
-
-                // 変換したのでMIMEタイプはjpegにする
-                contentType = "image/jpeg";
-
-            } catch (Exception e) {
-                // 万が一変換に失敗したら、元のデータをそのまま使う保険
-                savedData = originalData;
             }
-        } else {
-            // 画像以外ならそのまま
-            savedData = originalData;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("画像ファイルを処理できませんでした");
         }
 
         // 3. データベースに保存
         RiddleImage img = new RiddleImage();
         img.setData(savedData);
-        img.setMimeType(contentType);
+        img.setMimeType("image/jpeg");
         img.setUuid(UUID.randomUUID().toString());
         riddleImageRepository.insert(img);
 
         return img.getId();
+    }
+
+    private boolean isAllowedImageBytes(byte[] data) {
+        if (data.length < 4)
+            return false;
+        if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF)
+            return true;
+        if (data[0] == (byte) 0x89 && data[1] == (byte) 0x50
+                && data[2] == (byte) 0x4E && data[3] == (byte) 0x47)
+            return true;
+        return data[0] == (byte) 0x47 && data[1] == (byte) 0x49
+                && data[2] == (byte) 0x46 && data[3] == (byte) 0x38;
+    }
+
+    private boolean isBCryptHash(String value) {
+        return value.matches("^\\$2[aby]\\$\\d{2}\\$.{53}$");
+    }
+
+    private void validateImageDimensions(BufferedImage image) {
+        if (image == null) {
+            throw new IllegalArgumentException("画像ファイルを処理できませんでした");
+        }
+        int width = image.getWidth();
+        int height = image.getHeight();
+        long pixels = (long) width * height;
+        if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION
+                || pixels > MAX_IMAGE_PIXELS) {
+            throw new IllegalArgumentException("画像サイズが大きすぎます");
+        }
     }
 
     // カタログ取得

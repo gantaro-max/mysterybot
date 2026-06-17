@@ -42,6 +42,7 @@ public class UserController {
         TeamGroup group = eventAdminService.getEvent(groupId);
         model.addAttribute("group", group);
         model.addAttribute("botFriendUrl", botFriendUrl);
+        model.addAttribute("isImpersonating", session.getAttribute("originalAdminId") != null);
         return "user/dashboard";
     }
 
@@ -85,22 +86,31 @@ public class UserController {
         if (groupId == null)
             return "redirect:/auth/login";
 
-        // 画像をアップロードしてIDを取得（なければnull）
-        Integer imageId = eventAdminService.uploadImage(imageFile);
+        try {
+            // 画像をアップロードしてIDを取得（なければnull）
+            Integer imageId = eventAdminService.uploadImage(imageFile);
 
-        // サービスへ全データを渡す
-        eventAdminService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
+            // サービスへ全データを渡す
+            eventAdminService.registerRiddle(groupId, question, answer, nextMsg, imageId, hintMsg);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/user/riddles?error=invalidImage";
+        }
         return "redirect:/user/riddles";
     }
 
     // 5. 編集画面
     @GetMapping("/riddles/edit/{id}")
     public String editRiddle(@PathVariable Integer id, Model model) {
-        if (getLoginGroupId() == null)
+        String groupId = getLoginGroupId();
+        if (groupId == null)
             return "redirect:/auth/login";
-        Riddle riddle = eventAdminService.getRiddle(id);
-        model.addAttribute("riddle", riddle);
-        return "user/riddle_edit";
+        try {
+            Riddle riddle = eventAdminService.getRiddleOwnedBy(id, groupId);
+            model.addAttribute("riddle", riddle);
+            return "user/riddle_edit";
+        } catch (SecurityException e) {
+            return "redirect:/user/riddles";
+        }
     }
 
     // 6. 更新処理 (画像とヒントに対応)
@@ -110,20 +120,27 @@ public class UserController {
             @RequestParam(required = false) String hintMsg,
             @RequestParam(required = false) MultipartFile imageFile) throws IOException {
 
-        if (getLoginGroupId() == null)
+        String groupId = getLoginGroupId();
+        if (groupId == null)
             return "redirect:/auth/login";
 
-        // 1. まず現在の情報を取得（古い画像IDを知るため）
-        Riddle oldRiddle = eventAdminService.getRiddle(id);
-        Integer imageId = oldRiddle.getImageId();
+        try {
+            // 1. まず現在の情報を取得（古い画像IDを知るため）
+            Riddle oldRiddle = eventAdminService.getRiddleOwnedBy(id, groupId);
+            Integer imageId = oldRiddle.getImageId();
 
-        // 2. 新しい画像がアップロードされていれば保存してIDを更新
-        if (imageFile != null && !imageFile.isEmpty()) {
-            imageId = eventAdminService.uploadImage(imageFile);
+            // 2. 新しい画像がアップロードされていれば保存してIDを更新
+            if (imageFile != null && !imageFile.isEmpty()) {
+                imageId = eventAdminService.uploadImage(imageFile);
+            }
+
+            // 3. 更新実行
+            eventAdminService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageId);
+        } catch (SecurityException e) {
+            return "redirect:/user/riddles";
+        } catch (IllegalArgumentException e) {
+            return "redirect:/user/riddles?error=invalidImage";
         }
-
-        // 3. 更新実行
-        eventAdminService.updateRiddle(id, question, answer, nextMsg, hintMsg, imageId);
 
         return "redirect:/user/riddles";
     }
@@ -131,9 +148,14 @@ public class UserController {
     // 7. 削除処理
     @PostMapping("/riddles/delete/{id}")
     public String deleteRiddle(@PathVariable Integer id) {
-        if (getLoginGroupId() == null)
+        String groupId = getLoginGroupId();
+        if (groupId == null)
             return "redirect:/auth/login";
-        eventAdminService.deleteRiddle(id);
+        try {
+            eventAdminService.deleteRiddle(id, groupId);
+        } catch (SecurityException e) {
+            return "redirect:/user/riddles";
+        }
         return "redirect:/user/riddles";
     }
 
