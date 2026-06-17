@@ -36,3 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 db-data/
+
+### Secrets ###
+src/main/resources/application.properties
