@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.0] - 2026-06-17
+
+### Security
+- **BCrypt認証導入**: パスワードを BCryptPasswordEncoder でハッシュ化して保存・検証するよう変更。平文パスワードの既存ユーザーはログイン時に自動移行。
+- **セッション固定攻撃対策**: ログイン・新規登録成功時に `request.changeSessionId()` を実行。
+- **CSRF保護**: Spring Security の `SecurityFilterChain` を導入。全フォームに `th:action` でCSRFトークンを自動付与。LINE Webhook (`/callback`) のみ除外。
+- **ログアウトPOST化**: `GET /auth/logout` を `POST` に変更し、フォームからのみ実行可能に。
+- **IDOR対策**: `getRiddleOwnedBy(id, groupId)` による所有権チェックをリドル編集・更新・削除の全操作に適用。
+- **予約グループIDブロック**: `/auth/register` で "admin", "system" 等の予約IDを登録不可に。
+- **ファイルアップロード検証**: マジックバイト検査（JPEG/PNG/GIF）・ファイルサイズ上限・デコードボム攻撃対策を追加。
+- **Content-Type固定**: `ImageController` の画像配信を `MediaType.IMAGE_JPEG` 固定にし stored XSS を防止。
+- **デバッグエンドポイント削除**: 未認証で全謎問題と回答を返す `TestController` を削除。
+- **なりすまし安全化**: `originalAdminId` セッション属性で管理者IDを保持し、`/admin/end-impersonate` で正常復帰できるよう修正。なりすまし中は警告バナーを表示。
+- **Git履歴クリーン**: `git filter-repo` で過去のコミットから認証情報を消去。
+
+---
+
 ## [2.1.0] - 2026-01-13
 
 ### Added
