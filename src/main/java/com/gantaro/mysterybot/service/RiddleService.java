@@ -63,16 +63,16 @@ public class RiddleService {
     }
 
     @Transactional
-    public void updateRiddle(Integer id, String groupId, String question, String answer, String nextMsg,
-            String hintMsg, Integer imageId) {
+    public void updateRiddle(Integer id, String groupId, String question, String answer,
+            String nextMsg, String hintMsg, MultipartFile imageFile) throws IOException {
         Riddle resultRiddle = getRiddleOwnedBy(id, groupId);
         resultRiddle.setQuestion(question);
         resultRiddle.setAnswer(answer);
         resultRiddle.setNextMsg(nextMsg);
         resultRiddle.setHintMsg(hintMsg);
 
-        if (imageId != null) {
-            resultRiddle.setImageId(imageId);
+        if (imageFile != null && !imageFile.isEmpty()) {
+            resultRiddle.setImageId(uploadImage(imageFile));
         }
 
         riddleRepository.update(resultRiddle);

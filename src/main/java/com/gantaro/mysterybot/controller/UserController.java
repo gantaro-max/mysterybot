@@ -117,17 +117,7 @@ public class UserController {
         String groupId = getLoginGroupId();
 
         try {
-            // 1. まず現在の情報を取得（古い画像IDを知るため）
-            Riddle oldRiddle = riddleService.getRiddleOwnedBy(id, groupId);
-            Integer imageId = oldRiddle.getImageId();
-
-            // 2. 新しい画像がアップロードされていれば保存してIDを更新
-            if (imageFile != null && !imageFile.isEmpty()) {
-                imageId = riddleService.uploadImage(imageFile);
-            }
-
-            // 3. 更新実行
-            riddleService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageId);
+            riddleService.updateRiddle(id, groupId, question, answer, nextMsg, hintMsg, imageFile);
         } catch (SecurityException e) {
             return "redirect:/user/riddles";
         } catch (IllegalArgumentException e) {
@@ -173,8 +163,6 @@ public class UserController {
     // 10. カタログ一覧表示
     @GetMapping("/catalog")
     public String catalog(Model model) {
-        String groupId = getLoginGroupId();
-
         // カタログデータを取得
         model.addAttribute("catalog", catalogService.getCatalog());
         // 主催者は管理者ではないのでfalse

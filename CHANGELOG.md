@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.3.0] - 2026-06-17
+
+### Changed
+
+- **設定統一（Phase 1）**: `application.properties` / `application.yml` / `application.properties.example` の3ファイルを `application.properties` に統合。シークレットは `${ENV_VAR:default}` 形式で環境変数注入。`.gitignore` 除外を解除し、コミット可能な設定ファイルに変更。
+- **サービス層分割（Phase 2）**: 330行の God Service（`EventAdminService`）を4サービスに分解。
+  - `AuthService`: ログイン・BCrypt認証・イベント登録
+  - `RiddleService`: リドルCRUD・画像アップロード・IDOR チェック
+  - `CatalogService`: マスター問題CRUD・カタログインポート
+  - `EventAdminService`: イベント取得・ランキング・開始/設定変更・削除に縮小
+- **認証インターセプター（Phase 3）**: `AuthInterceptor`（`HandlerInterceptor`）を導入し、`/user/**` と `/admin/**` の認証・認可チェックを一元化。コントローラー11箇所の重複チェックコードを削除。
+- **リファクタリング（Phase 4）**: `RiddleService.updateRiddle()` を `MultipartFile` 受け取りに変更し、所有権チェックと画像処理をサービス内で一括実施（二重チェック解消）。`MasterRiddleRequest` Java record DTO を導入し `CatalogService` の引数を整理。
+
+### Added
+
+- `LineBotAutoConfigurationEnvironmentPostProcessor`: LINE SDK の channel-secret 未設定時の起動エラーを回避する `EnvironmentPostProcessor` を追加。
+- `MasterRiddleRequest` DTO（Java record）を `dto/` パッケージに追加。
+- `AuthInterceptorTest`・`RiddleServiceTest`・`CatalogServiceTest` を追加。
+
+---
+
 ## [2.2.0] - 2026-06-17
 
 ### Security

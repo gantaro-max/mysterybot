@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.gantaro.mysterybot.dto.MasterRiddleRequest;
 import com.gantaro.mysterybot.entity.MasterRiddle;
 import com.gantaro.mysterybot.entity.TeamGroup;
 import com.gantaro.mysterybot.service.CatalogService;
@@ -27,11 +28,6 @@ public class AdminController {
     private final CatalogService catalogService;
     private final RiddleService riddleService;
     private final HttpSession session;
-
-    private String getLoginGroupId() {
-        return (String) session.getAttribute("loginGroupId");
-    }
-
 
     // S1. 統合ダッシュボード表示
     @GetMapping("/dashboard")
@@ -98,8 +94,8 @@ public class AdminController {
 
         try {
             Integer imgId = riddleService.uploadImage(imageFile);
-            catalogService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId,
-                    category);
+            catalogService.registerMasterRiddle(
+                    new MasterRiddleRequest(question, answer, nextMsg, hintMsg, imgId, category));
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/catalog?error=invalidImage";
         }
@@ -138,14 +134,12 @@ public class AdminController {
 
         try {
             Integer imgId = riddleService.uploadImage(imageFile);
-            catalogService.updateMasterRiddle(id, question, answer, nextMsg, hintMsg, imgId,
-                    category);
+            catalogService.updateMasterRiddle(id,
+                    new MasterRiddleRequest(question, answer, nextMsg, hintMsg, imgId, category));
         } catch (IllegalArgumentException e) {
             return "redirect:/admin/catalog?error=invalidImage";
         }
 
         return "redirect:/admin/catalog";
     }
-
-
 }

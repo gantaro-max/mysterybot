@@ -79,7 +79,8 @@ src/main/java/com/gantaro/mysterybot/
 ├── entity/                         # DB エンティティ
 ├── repository/                     # MyBatis リポジトリ
 ├── dto/
-│   └── GameResult.java
+│   ├── GameResult.java
+│   └── MasterRiddleRequest.java      # マスター問題登録・更新 DTO（Java record）
 └── util/
     └── FlexMessageHelper.java      # LINE メッセージ生成
 

@@ -3,6 +3,7 @@ package com.gantaro.mysterybot.service;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gantaro.mysterybot.dto.MasterRiddleRequest;
 import com.gantaro.mysterybot.entity.MasterRiddle;
 import com.gantaro.mysterybot.repository.MasterRiddleRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,15 +29,14 @@ public class CatalogService {
     }
 
     @Transactional
-    public void registerMasterRiddle(String q, String a, String n, String h, Integer imgId,
-            String cat) {
+    public void registerMasterRiddle(MasterRiddleRequest req) {
         MasterRiddle mr = new MasterRiddle();
-        mr.setQuestion(q);
-        mr.setAnswer(a);
-        mr.setNextMsg(n);
-        mr.setHintMsg(h);
-        mr.setImageId(imgId);
-        mr.setCategory(cat);
+        mr.setQuestion(req.question());
+        mr.setAnswer(req.answer());
+        mr.setNextMsg(req.nextMsg());
+        mr.setHintMsg(req.hintMsg());
+        mr.setImageId(req.imageId());
+        mr.setCategory(req.category());
         masterRiddleRepository.insert(mr);
     }
 
@@ -45,21 +45,20 @@ public class CatalogService {
     }
 
     @Transactional
-    public void updateMasterRiddle(Integer id, String question, String answer, String nextMsg,
-            String hintMsg, Integer imageId, String category) {
+    public void updateMasterRiddle(Integer id, MasterRiddleRequest req) {
 
         MasterRiddle mr = masterRiddleRepository.findById(id);
         if (mr == null)
             return;
 
-        mr.setQuestion(question);
-        mr.setAnswer(answer);
-        mr.setNextMsg(nextMsg);
-        mr.setHintMsg(hintMsg);
-        mr.setCategory(category);
+        mr.setQuestion(req.question());
+        mr.setAnswer(req.answer());
+        mr.setNextMsg(req.nextMsg());
+        mr.setHintMsg(req.hintMsg());
+        mr.setCategory(req.category());
 
-        if (imageId != null) {
-            mr.setImageId(imageId);
+        if (req.imageId() != null) {
+            mr.setImageId(req.imageId());
         }
 
         masterRiddleRepository.update(mr);
