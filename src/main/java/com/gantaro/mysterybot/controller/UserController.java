@@ -40,8 +40,6 @@ public class UserController {
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         TeamGroup group = eventAdminService.getEvent(groupId);
         model.addAttribute("group", group);
@@ -54,8 +52,6 @@ public class UserController {
     @GetMapping("/ranking")
     public String ranking(Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         TeamGroup group = eventAdminService.getEvent(groupId);
         List<Player> ranking = eventAdminService.getRanking(groupId);
@@ -69,8 +65,6 @@ public class UserController {
     @GetMapping("/riddles")
     public String listRiddles(Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         TeamGroup group = eventAdminService.getEvent(groupId);
         List<Riddle> riddles = riddleService.getRiddles(groupId);
@@ -87,8 +81,6 @@ public class UserController {
             @RequestParam String nextMsg, @RequestParam(required = false) String hintMsg,
             @RequestParam(required = false) MultipartFile imageFile) throws IOException {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         try {
             // 画像をアップロードしてIDを取得（なければnull）
@@ -106,8 +98,6 @@ public class UserController {
     @GetMapping("/riddles/edit/{id}")
     public String editRiddle(@PathVariable Integer id, Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
         try {
             Riddle riddle = riddleService.getRiddleOwnedBy(id, groupId);
             model.addAttribute("riddle", riddle);
@@ -125,8 +115,6 @@ public class UserController {
             @RequestParam(required = false) MultipartFile imageFile) throws IOException {
 
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         try {
             // 1. まず現在の情報を取得（古い画像IDを知るため）
@@ -153,8 +141,6 @@ public class UserController {
     @PostMapping("/riddles/delete/{id}")
     public String deleteRiddle(@PathVariable Integer id) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
         try {
             riddleService.deleteRiddle(id, groupId);
         } catch (SecurityException e) {
@@ -167,8 +153,6 @@ public class UserController {
     @PostMapping("/riddles/settings")
     public String updateSettings(@RequestParam(required = false) Boolean isRandom) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
         eventAdminService.updateEventSettings(groupId, isRandom != null);
         return "redirect:/user/riddles";
     }
@@ -177,8 +161,6 @@ public class UserController {
     @PostMapping("/start-event")
     public String startEvent(Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
         TeamGroup group = eventAdminService.getEvent(groupId);
         if (group.getStartedAt() != null)
             return "redirect:/user/dashboard";
@@ -192,8 +174,6 @@ public class UserController {
     @GetMapping("/catalog")
     public String catalog(Model model) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         // カタログデータを取得
         model.addAttribute("catalog", catalogService.getCatalog());
@@ -209,8 +189,6 @@ public class UserController {
     @PostMapping("/catalog/import")
     public String importRiddle(@RequestParam Integer id) {
         String groupId = getLoginGroupId();
-        if (groupId == null)
-            return "redirect:/auth/login";
 
         catalogService.importFromCatalog(groupId, id);
         return "redirect:/user/riddles";

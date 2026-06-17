@@ -169,6 +169,7 @@ docker-compose up -d   # ローカルDB起動
 ### 認証方式
 - セッションベース（`HttpSession` に `loginGroupId` を格納）
 - `groupId == "admin"` でスーパーAdmin 権限
+- `AuthInterceptor` が `/user/**` と `/admin/**` を一元ガード（コントローラーに認証チェックを書かない）
 
 ### サービス層
 - `AuthService`: ログイン・BCrypt認証・イベント登録

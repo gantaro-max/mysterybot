@@ -36,11 +36,6 @@ public class AdminController {
     // S1. 統合ダッシュボード表示
     @GetMapping("/dashboard")
     public String superDashboard(Model model) {
-        // IDが "admin" でなければログイン画面へ弾く
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
-
         List<TeamGroup> allEvents = eventAdminService.getAllEvents();
         model.addAttribute("events", allEvents);
         return "admin/dashboard";
@@ -49,10 +44,6 @@ public class AdminController {
     // S2. ゴッドログイン（パスワードなしで該当イベントの管理画面へ侵入）
     @PostMapping("/impersonate/{groupId}")
     public String impersonate(@PathVariable String groupId) {
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
-
         eventAdminService.getEvent(groupId);
         session.setAttribute("originalAdminId", "admin");
         session.setAttribute("loginGroupId", groupId);
@@ -74,10 +65,6 @@ public class AdminController {
     // S3. イベント強制削除
     @PostMapping("/delete/{groupId}")
     public String forceDeleteEvent(@PathVariable String groupId) {
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
-
         // 自身のID(admin)は消さないようにガード
         if ("admin".equals(groupId)) {
             return "redirect:/admin/dashboard?error=admin_cannot_delete";
@@ -92,9 +79,6 @@ public class AdminController {
     // S4. カタログ一覧・編集画面表示
     @GetMapping("/catalog")
     public String catalog(Model model) {
-        if (!"admin".equals(getLoginGroupId()))
-            return "redirect:/auth/login";
-
         model.addAttribute("catalog", catalogService.getCatalog());
         // 管理者権限ON（これで追加フォームが表示されます）
         model.addAttribute("isSuperAdmin", true);
@@ -112,9 +96,6 @@ public class AdminController {
             @RequestParam String category, @RequestParam(required = false) MultipartFile imageFile)
             throws IOException {
 
-        if (!"admin".equals(getLoginGroupId()))
-            return "redirect:/auth/login";
-
         try {
             Integer imgId = riddleService.uploadImage(imageFile);
             catalogService.registerMasterRiddle(question, answer, nextMsg, hintMsg, imgId,
@@ -129,11 +110,6 @@ public class AdminController {
     // S6. イベント時間をリセット（準備中に戻す）
     @PostMapping("/reset-time/{groupId}")
     public String resetEventTime(@PathVariable String groupId) {
-        // 管理者権限チェック
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
-
         eventAdminService.resetEventTime(groupId);
         return "redirect:/admin/dashboard";
     }
@@ -141,9 +117,6 @@ public class AdminController {
     // S7. カタログ問題の削除
     @PostMapping("/catalog/delete/{id}")
     public String deleteMasterRiddle(@PathVariable Integer id) {
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
         catalogService.deleteMasterRiddle(id);
         return "redirect:/admin/catalog";
     }
@@ -151,10 +124,6 @@ public class AdminController {
     // ▼▼▼ 編集画面表示 ▼▼▼
     @GetMapping("/catalog/edit/{id}")
     public String editMasterRiddlePage(@PathVariable Integer id, Model model) {
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
-
         MasterRiddle riddle = catalogService.getMasterRiddle(id);
         model.addAttribute("riddle", riddle);
         return "admin/master_riddle_edit";
@@ -166,10 +135,6 @@ public class AdminController {
             @RequestParam String answer, @RequestParam String nextMsg, @RequestParam String hintMsg,
             @RequestParam String category, @RequestParam(required = false) MultipartFile imageFile)
             throws IOException {
-
-        if (!"admin".equals(getLoginGroupId())) {
-            return "redirect:/auth/login";
-        }
 
         try {
             Integer imgId = riddleService.uploadImage(imageFile);

@@ -51,6 +51,7 @@ URL プレフィックスでロールを分離する。
 - セッションベース（`HttpSession` に `loginGroupId` を格納）
 - `groupId == "admin"` でスーパーAdmin 権限
 - Spring Security `SecurityFilterChain` で CSRF 保護（`/callback` のみ除外）
+- `AuthInterceptor`（`HandlerInterceptor`）が `/user/**` と `/admin/**` を一元ガード（コントローラーの重複認証チェックを排除）
 
 ---
 
@@ -60,6 +61,8 @@ URL プレフィックスでロールを分離する。
 src/main/java/com/gantaro/mysterybot/
 ├── config/
 │   ├── SecurityConfig.java                                  # Spring Security 設定
+│   ├── AuthInterceptor.java                                 # 認証・認可インターセプター（/user/**, /admin/**）
+│   ├── WebConfig.java                                       # HandlerInterceptor 登録
 │   └── LineBotAutoConfigurationEnvironmentPostProcessor.java # LINE SDK 起動制御
 ├── controller/
 │   ├── AdminController.java        # スーパーAdmin 用
